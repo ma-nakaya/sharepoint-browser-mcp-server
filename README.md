@@ -50,12 +50,13 @@ Copy-Item .env.example .env
 
 ```dotenv
 SHAREPOINT_SITE_URL=https://tenant.sharepoint.com/sites/example
-SHAREPOINT_EDGE_PROFILE_DIR=C:\Apps\SharePointBrowserMcp\edge-profile
+SHAREPOINT_PROFILE_DIR=C:\Apps\SharePointBrowserMcp\edge-profile
 SHAREPOINT_HEADLESS=true
 LOG_LEVEL=info
 ```
 
 `SHAREPOINT_SITE_URL`は、SharePoint Onlineの`/sites/<name>`または`/teams/<name>`を指定してください。テナントルート、OneDrive、任意のURLは受け付けません。
+`npm run login`、`npm run dev`、`npm start`は、プロジェクト直下に`.env`があれば自動的に読み込みます。
 
 ## 初回ログイン・再認証
 
@@ -65,7 +66,7 @@ npm run login
 
 MCP専用プロファイルでEdgeが起動します。通常どおりSSO・MFAを完了し、対象SharePointサイトが表示されたことを確認してからEdgeを閉じます。
 
-普段利用しているEdgeプロファイルを`SHAREPOINT_EDGE_PROFILE_DIR`に指定しないでください。既知のEdge既定プロファイル配下は起動前に拒否します。
+普段利用しているEdgeプロファイルを`SHAREPOINT_PROFILE_DIR`に指定しないでください。既知のEdge既定プロファイル配下は起動前に拒否します。
 
 ## 検証
 
@@ -103,11 +104,11 @@ stdioクライアントの設定例:
     "sharepoint-browser": {
       "command": "node",
       "args": [
-        "C:\\Apps\\sharepoint-browser-mcp-server\\dist\\index.js"
+        "C:\\Apps\\sharepoint-browser-mcp-server\\dist\\src\\index.js"
       ],
       "env": {
         "SHAREPOINT_SITE_URL": "https://tenant.sharepoint.com/sites/example",
-        "SHAREPOINT_EDGE_PROFILE_DIR": "C:\\Apps\\SharePointBrowserMcp\\edge-profile",
+        "SHAREPOINT_PROFILE_DIR": "C:\\Apps\\SharePointBrowserMcp\\edge-profile",
         "SHAREPOINT_HEADLESS": "true"
       }
     }

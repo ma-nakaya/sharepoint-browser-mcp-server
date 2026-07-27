@@ -10,10 +10,14 @@
   "scripts": {
     "clean": "node -e \"import('node:fs').then(({ rmSync }) => rmSync('dist', { recursive: true, force: true }))\"",
     "build": "tsc -p tsconfig.json",
-    "start": "node --enable-source-maps dist/src/index.js",
-    "login": "node --enable-source-maps dist/src/login.js",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "start": "node --env-file-if-exists=.env --enable-source-maps dist/src/index.js",
+    "prelogin": "npm run build",
+    "login": "node --env-file-if-exists=.env --enable-source-maps dist/src/login.js",
+    "dev": "npm run build && npm start",
+    "pretest": "npm run build",
     "test": "node --test --enable-source-maps \"dist/test/**/*.test.js\"",
-    "check": "npm run clean && npm run build && npm test"
+    "check": "npm run clean && npm test"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "1.29.0",
