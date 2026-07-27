@@ -1,0 +1,14 @@
+export type RequestMethod = "api-request" | "browser-fetch";
+
+export interface SharePointResponse {
+  readonly status: number;
+  readonly contentType: string;
+  readonly body: string;
+  readonly method: RequestMethod;
+}
+
+export interface SharePointTransport {
+  get(apiPath: string): Promise<SharePointResponse>;
+  getViaPage(apiPath: string): Promise<SharePointResponse>;
+  close(): Promise<void>;
+}
