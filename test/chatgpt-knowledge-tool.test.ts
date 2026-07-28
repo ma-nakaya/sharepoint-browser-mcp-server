@@ -101,6 +101,54 @@ test("advertises ChatGPT-compatible search and fetch tools over MCP", async () =
   }
 });
 
+test("returns safe fetch failures as MCP tool errors", async () => {
+  const service = {
+    search: async () => ({ results: [] }),
+    fetch: async () => {
+      throw new Error("The SharePoint list item was not found.");
+    },
+  };
+  const server = new McpServer({
+    name: "chatgpt-knowledge-error-test",
+    version: "0.0.0",
+  });
+  registerChatGptKnowledgeTools(
+    server,
+    service as unknown as ChatGptKnowledgeService,
+  );
+  const client = new Client({
+    name: "chatgpt-knowledge-error-test-client",
+    version: "0.0.0",
+  });
+  const [clientTransport, serverTransport] =
+    InMemoryTransport.createLinkedPair();
+
+  try {
+    await Promise.all([
+      server.connect(serverTransport),
+      client.connect(clientTransport),
+    ]);
+
+    const result = await client.callTool({
+      name: "fetch",
+      arguments: { id: pageUrlForErrorTest },
+    });
+    const validatedResult = CallToolResultSchema.parse(result);
+
+    assert.equal(validatedResult.isError, true);
+    assert.equal(
+      getTextContent(validatedResult.content),
+      "The SharePoint list item was not found.",
+    );
+  } finally {
+    await client.close();
+    await server.close();
+  }
+});
+
+const pageUrlForErrorTest =
+  "https://example.sharepoint.com/sites/genai/Lists/Rules/DispForm.aspx?ID=1";
+
 function getTextContent(
   content: CallToolResult["content"],
 ): string {

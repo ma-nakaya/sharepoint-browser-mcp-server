@@ -21,7 +21,8 @@ export function registerSearchTool(
       description: [
         "Searches pages and files under the configured SharePoint site using SharePoint's own search index.",
         "Supports folder, content-kind, file-extension, modified-date, sort, and paging controls.",
-        "Use returned page URLs with sharepoint_get_page and PDF/DOCX/XLSX/PPTX URLs with sharepoint_extract_document_text.",
+        "For policies and regulations, start with the exact title and scope=all because current content may be a Lists/DispForm.aspx item rather than a document file.",
+        "Use the standard fetch tool for returned list-item URLs, sharepoint_get_page for SitePages URLs, and sharepoint_extract_document_text for PDF/DOCX/XLSX/PPTX URLs.",
         "This tool is read-only and never returns cookies, tokens, or authorization headers.",
       ].join(" "),
       inputSchema: {

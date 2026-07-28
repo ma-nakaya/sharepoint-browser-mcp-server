@@ -129,6 +129,38 @@ test("does not retry a clear page not-found response", async () => {
   assert.equal(transport.fallbackCalls, 0);
 });
 
+test("reads a normalized SharePoint list item through FieldValuesAsText", async () => {
+  const transport = new FakeTransport(
+    response(
+      200,
+      JSON.stringify({
+        Title: "05 国内出張旅費規程",
+        Body: "<p>第1条 目的</p>",
+      }),
+    ),
+    new Error("fallback must not run"),
+  );
+  const service = new SharePointReadService(SITE_URL, transport);
+
+  const result = await service.getListItem(
+    "/sites/genai/Lists/Rules/DispForm.aspx?ID=204",
+  );
+  const url = new URL(transport.lastApiPath ?? "", `${SITE_URL}/`);
+
+  assert.equal(result.title, "05 国内出張旅費規程");
+  assert.equal(result.itemId, 204);
+  assert.match(result.text, /第1条 目的/u);
+  assert.equal(
+    url.pathname,
+    "/_api/web/GetList(@listUrl)/items(204)/FieldValuesAsText",
+  );
+  assert.equal(
+    url.searchParams.get("@listUrl"),
+    "'/sites/genai/Lists/Rules'",
+  );
+  assert.equal(transport.fallbackCalls, 0);
+});
+
 test("rejects truncated JSON responses without parsing the body", async () => {
   const transport = new FakeTransport(
     response(200, '{"partial":', "application/json", "api-request", true),
