@@ -2,7 +2,7 @@
 
 Entra IDアプリ登録を使用せず、Microsoft Edgeの認証済みセッションからSharePoint Onlineへ読み取り専用で接続するオンプレMCPサーバーです。
 
-Phase 1の認証状態確認に加え、Phase 2では設定済みサイト内の検索と、`SitePages`ライブラリにあるSharePointページの本文取得に対応します。
+Phase 1の認証状態確認、Phase 2のサイト内検索とページ本文取得に加え、Phase 3ではドキュメントライブラリとフォルダーの一覧、制限付きファイルダウンロードに対応します。
 
 ## 目的
 
@@ -21,13 +21,15 @@ Phase 1の認証状態確認に加え、Phase 2では設定済みサイト内の
 - `/_api/web/currentuser`による認証確認
 - `sharepoint_search`による設定済みサイト内の検索
 - `sharepoint_get_page`による`SitePages`内の`.aspx`ページ本文取得
+- `sharepoint_list_document_libraries`による可視ドキュメントライブラリ一覧
+- `sharepoint_list_folder`による直下フォルダー・ファイル一覧
+- `sharepoint_download_file`による許可形式・5 MiB以下のファイル取得
 - `BrowserContext.request`からページ内`fetch`へのフォールバック
 - 設定値、URL制約、レスポンス解析、認証判定、検索・ページ取得の単体テスト
 
 ## 対象外
 
 - リスト項目の汎用取得
-- ファイル一覧・ダウンロード
 - Office文書解析
 - 書き込み、アップロード、更新、削除
 - OneDrive
@@ -154,17 +156,42 @@ MCP結果には、表示名とサイトURLだけを含めます。メールア�
 - 生の`CanvasContent1` HTML、Webパーツ設定、スクリプト、スタイルは返却しない
 - 動的Webパーツが実行時に表示するデータは対象外
 
+### `sharepoint_list_document_libraries`
+
+設定済みサイト内の非表示ではないドキュメントライブラリと、そのルートフォルダーURLを返します。
+
+### `sharepoint_list_folder`
+
+指定フォルダー直下のフォルダーとファイルを、それぞれ最大100件まで返します。
+
+- 入力: 絶対URLまたはサーバー相対URL、任意の`maxResults`（1〜100、既定値50）
+- 出力: 名前、URL、サイズ、更新日時、バージョン、ダウンロード可否
+- 設定サイト外や直接の子ではない応答項目を除外
+
+### `sharepoint_download_file`
+
+設定済みサイト内の許可形式ファイルをMCPの埋め込みバイナリresourceとして返します。
+
+- 最大5 MiB
+- 対応形式: PDF、DOCX、XLSX、PPTX、TXT、Markdown、CSV、JSON、XML、BMP、GIF、JPEG、PNG、WebP
+- 実行形式、スクリプト、HTML、SVG、マクロ有効Office形式、その他の形式は拒否
+- SharePointメタデータと実データのサイズを照合
+- SHA-256をメタデータとして返却
+
 ## セキュリティ境界
 
 - 対象は設定済みSharePoint Onlineサイトのみ
 - REST要求は対象サイト配下の`/_api/`のみ
 - ページ取得は設定サイトの`SitePages`配下にある`.aspx`だけを許可
 - 検索結果URLを再検証し、設定サイト外の結果を除外
+- フォルダー・ファイルURLとSharePoint応答パスを再検証
+- バイナリは許可形式と5 MiB上限を満たす場合だけ返却
 - OneDrive、テナントルート、任意URLを拒否
 - MCPツールは読み取り専用、非破壊、冪等として宣言
 - Cookieやトークンを独自ファイルへエクスポートしない
 - HTTPエラー時のHTML本文を読み取らない
 - ログは標準エラーへ出力し、標準出力はMCPプロトコル専用とする
 
-詳細は[`docs/phase-1-authentication.md`](docs/phase-1-authentication.md)と
-[`docs/phase-2-sharepoint-read.md`](docs/phase-2-sharepoint-read.md)を参照してください。
+詳細は[`docs/phase-1-authentication.md`](docs/phase-1-authentication.md)、
+[`docs/phase-2-sharepoint-read.md`](docs/phase-2-sharepoint-read.md)、
+[`docs/phase-3-file-access.md`](docs/phase-3-file-access.md)を参照してください。

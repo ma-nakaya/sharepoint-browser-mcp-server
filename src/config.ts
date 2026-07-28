@@ -69,7 +69,7 @@ export function normalizeSharePointSiteUrl(value: string): string {
     throw new Error("SHAREPOINT_SITE_URL must use a SharePoint Online host.");
   }
   if (hostname.endsWith("-my.sharepoint.com")) {
-    throw new Error("OneDrive hosts are not allowed in Phase 1.");
+    throw new Error("OneDrive hosts are not allowed.");
   }
 
   const segments = url.pathname.split("/").filter(Boolean);

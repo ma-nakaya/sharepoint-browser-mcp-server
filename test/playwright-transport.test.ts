@@ -92,6 +92,42 @@ test("reads a successful JSON response body", async () => {
   assert.equal(result.method, "api-request");
 });
 
+test("rejects an oversized binary response before reading its body", async () => {
+  let bodyRead = false;
+  const context = {
+    request: {
+      get: async () => ({
+        status: () => 200,
+        headers: () => ({
+          "content-type": "application/pdf",
+          "content-length": String(5 * 1_024 * 1_024 + 1),
+        }),
+        body: async () => {
+          bodyRead = true;
+          return Buffer.alloc(0);
+        },
+      }),
+    },
+  };
+  const edgeSession = {
+    getContext: async () => context,
+    close: async () => undefined,
+  };
+  const transport = new PlaywrightSharePointTransport(
+    CONFIG,
+    edgeSession as never,
+    LOGGER,
+  );
+
+  const result = await transport.getBinary(
+    "/_api/web/GetFileByServerRelativePath(decodedUrl='/sites/genai/Documents/a.pdf')/$value",
+  );
+
+  assert.equal(result.bodyTruncated, true);
+  assert.equal(result.body.byteLength, 0);
+  assert.equal(bodyRead, false);
+});
+
 function createLoginRedirectContext(closeCounter: { value: number }) {
   const page = {
     goto: async () => undefined,

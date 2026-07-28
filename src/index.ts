@@ -5,14 +5,16 @@ import { EdgeSession } from "./browser/edge-session.js";
 import { loadConfig } from "./config.js";
 import { StderrJsonLogger } from "./logger.js";
 import { AuthStatusService } from "./sharepoint/auth-status-service.js";
+import { SharePointFileService } from "./sharepoint/file-service.js";
 import { PlaywrightSharePointTransport } from "./sharepoint/playwright-transport.js";
 import { SharePointReadService } from "./sharepoint/read-service.js";
 import { registerAuthStatusTool } from "./tools/auth-status-tool.js";
+import { registerFileTools } from "./tools/file-tools.js";
 import { registerPageTool } from "./tools/page-tool.js";
 import { registerSearchTool } from "./tools/search-tool.js";
 
 const SERVER_NAME = "sharepoint-browser-mcp-server";
-const SERVER_VERSION = "0.2.0";
+const SERVER_VERSION = "0.3.0";
 
 async function main(): Promise<void> {
   const config = loadConfig();
@@ -21,6 +23,7 @@ async function main(): Promise<void> {
   const sharePointTransport = new PlaywrightSharePointTransport(config, edgeSession, logger);
   const authStatusService = new AuthStatusService(config.siteUrl, sharePointTransport);
   const readService = new SharePointReadService(config.siteUrl, sharePointTransport);
+  const fileService = new SharePointFileService(config.siteUrl, sharePointTransport);
 
   const server = new McpServer(
     { name: SERVER_NAME, version: SERVER_VERSION },
@@ -36,6 +39,7 @@ async function main(): Promise<void> {
   registerAuthStatusTool(server, authStatusService);
   registerSearchTool(server, readService);
   registerPageTool(server, readService);
+  registerFileTools(server, fileService);
 
   let shuttingDown = false;
   const shutdown = async (signal: string): Promise<void> => {
