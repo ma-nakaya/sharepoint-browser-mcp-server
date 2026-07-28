@@ -2,7 +2,7 @@
 
 Entra IDアプリ登録を使用せず、Microsoft Edgeの認証済みセッションからSharePoint Onlineへ読み取り専用で接続するオンプレMCPサーバーです。
 
-Phase 1の認証状態確認、Phase 2の検索・ページ本文取得、Phase 3のファイルアクセス、Phase 4のPDF・Office文書本文抽出、Phase 5のSharePointサイト横断検索に加え、Phase 6では文書構造のアウトライン・検索・部分取得に対応します。
+Phase 1の認証状態確認、Phase 2の検索・ページ本文取得、Phase 3のファイルアクセス、Phase 4のPDF・Office文書本文抽出、Phase 5のSharePointサイト横断検索、Phase 6の文書構造検索に加え、Phase 7ではSecure MCP Tunnel経由のChatGPT接続と会社知識互換の検索・取得に対応します。
 
 ## 目的
 
@@ -15,6 +15,7 @@ Phase 1の認証状態確認、Phase 2の検索・ページ本文取得、Phase 
 ## 対応範囲
 
 - TypeScriptのstdio MCPサーバー
+- OpenAI Secure MCP Tunnelによる非公開stdio接続
 - MCP専用Edgeプロファイル
 - 初回・再認証用のheadedログインコマンド
 - `sharepoint_auth_status` MCPツール
@@ -28,6 +29,7 @@ Phase 1の認証状態確認、Phase 2の検索・ページ本文取得、Phase 
 - `sharepoint_get_document_outline`によるページ・見出し・シート・スライドの構造化
 - `sharepoint_search_document`による1文書内のノード検索
 - `sharepoint_get_document_nodes`による選択ノードだけの本文取得
+- `search`と`fetch`によるChatGPT会社知識・Deep Research互換
 - `BrowserContext.request`からページ内`fetch`へのフォールバック
 - 設定値、URL制約、レスポンス解析、認証判定、検索、ページ、ファイル、文書抽出の単体テスト
 
@@ -38,7 +40,7 @@ Phase 1の認証状態確認、Phase 2の検索・ページ本文取得、Phase 
 - 旧Officeバイナリ形式（DOC、XLS、PPT）
 - 書き込み、アップロード、更新、削除
 - OneDrive
-- Secure MCP Tunnel
+- 公開HTTP MCPエンドポイントと一般公開プラグイン
 
 ## 動作要件
 
@@ -126,6 +128,18 @@ stdioクライアントの設定例:
 ```
 
 ## MCPツール
+
+### `search` / `fetch`
+
+ChatGPTの会社知識・Deep Research互換ツールです。`search`は設定済みSharePointサイトから引用可能なページと対応文書を検索し、`fetch`は返されたIDの本文と引用URLを取得します。
+
+- `search`入力: `query`
+- `search`出力: `id`、`title`、絶対`url`を持つ最大10件の`results`
+- `fetch`入力: `search`が返した`id`
+- `fetch`出力: `id`、`title`、`text`、`url`、`metadata`
+- 対応対象: `SitePages`の`.aspx`、PDF、DOCX、XLSX、PPTX
+
+ChatGPTとの接続方法は[`docs/phase-7-chatgpt-connection.md`](docs/phase-7-chatgpt-connection.md)を参照してください。
 
 ### `sharepoint_auth_status`
 
@@ -248,4 +262,5 @@ PDF・DOCX・XLSX・PPTXを共通ノードへ変換し、短いプレビュー�
 [`docs/phase-3-file-access.md`](docs/phase-3-file-access.md)、
 [`docs/phase-4-document-text.md`](docs/phase-4-document-text.md)、
 [`docs/phase-5-site-search.md`](docs/phase-5-site-search.md)、
-[`docs/phase-6-document-structure.md`](docs/phase-6-document-structure.md)を参照してください。
+[`docs/phase-6-document-structure.md`](docs/phase-6-document-structure.md)、
+[`docs/phase-7-chatgpt-connection.md`](docs/phase-7-chatgpt-connection.md)を参照してください。
