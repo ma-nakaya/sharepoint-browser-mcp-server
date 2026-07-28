@@ -2,7 +2,7 @@
 
 Entra IDアプリ登録を使用せず、Microsoft Edgeの認証済みセッションからSharePoint Onlineへ読み取り専用で接続するオンプレMCPサーバーです。
 
-Phase 1の認証状態確認、Phase 2の検索・ページ本文取得、Phase 3のファイルアクセスに加え、Phase 4ではPDFとOpen XML Office文書の本文抽出に対応します。
+Phase 1の認証状態確認、Phase 2の検索・ページ本文取得、Phase 3のファイルアクセス、Phase 4のPDF・Office文書本文抽出に加え、Phase 5ではSharePointサイト横断検索の絞り込みとページングに対応します。
 
 ## 目的
 
@@ -19,7 +19,7 @@ Phase 1の認証状態確認、Phase 2の検索・ページ本文取得、Phase 
 - 初回・再認証用のheadedログインコマンド
 - `sharepoint_auth_status` MCPツール
 - `/_api/web/currentuser`による認証確認
-- `sharepoint_search`による設定済みサイト内の検索
+- `sharepoint_search`による設定済みサイト内の横断検索、種類・フォルダー・拡張子・更新日による絞り込み
 - `sharepoint_get_page`による`SitePages`内の`.aspx`ページ本文取得
 - `sharepoint_list_document_libraries`による可視ドキュメントライブラリ一覧
 - `sharepoint_list_folder`による直下フォルダー・ファイル一覧
@@ -142,11 +142,16 @@ MCP結果には、表示名とサイトURLだけを含めます。メールア�
 
 ### `sharepoint_search`
 
-設定済みSharePointサイト配下をキーワード検索します。
+SharePoint自身の検索インデックスを使い、設定済みサイト配下のページとファイルを横断検索します。
 
-- 入力: `query`、任意の`maxResults`（1〜20、既定値10）
-- 出力: タイトル、URL、ファイル拡張子、コンテンツ種別、更新日時、短い要約
+- 必須入力: `query`
+- 件数・ページング: `maxResults`（1〜20、既定値10）、`startRow`（0〜50,000）
+- 対象限定: `scope`（`all`、`pages`、`documents`）、任意の`folderUrl`
+- 絞り込み: `fileExtensions`（最大10種類）、`modifiedAfter`、`modifiedBefore`
+- 並び順: `relevance`または`modified-desc`
+- 出力: タイトル、URL、結果種別、親URL、ファイル拡張子、コンテンツ種別、更新日時、短い要約、ページング情報
 - 検索APIの結果に設定サイト外のURLが含まれても、MCP結果から除外
+- `kind=page`のURLは`sharepoint_get_page`、対応する`kind=document`のURLは`sharepoint_extract_document_text`へ渡せる
 
 ### `sharepoint_get_page`
 
@@ -199,6 +204,7 @@ MCP結果には、表示名とサイトURLだけを含めます。メールア�
 - REST要求は対象サイト配下の`/_api/`のみ
 - ページ取得は設定サイトの`SitePages`配下にある`.aspx`だけを許可
 - 検索結果URLを再検証し、設定サイト外の結果を除外
+- 検索対象フォルダー、拡張子、更新日の入力を検証し、検索結果の親URLもサイト境界と照合
 - フォルダー・ファイルURLとSharePoint応答パスを再検証
 - バイナリは許可形式と5 MiB上限を満たす場合だけ返却
 - Office ZIPは展開前後のサイズと部品数を制限し、DOCTYPE・ENTITYを拒否
@@ -212,4 +218,5 @@ MCP結果には、表示名とサイトURLだけを含めます。メールア�
 詳細は[`docs/phase-1-authentication.md`](docs/phase-1-authentication.md)、
 [`docs/phase-2-sharepoint-read.md`](docs/phase-2-sharepoint-read.md)、
 [`docs/phase-3-file-access.md`](docs/phase-3-file-access.md)、
-[`docs/phase-4-document-text.md`](docs/phase-4-document-text.md)を参照してください。
+[`docs/phase-4-document-text.md`](docs/phase-4-document-text.md)、
+[`docs/phase-5-site-search.md`](docs/phase-5-site-search.md)を参照してください。

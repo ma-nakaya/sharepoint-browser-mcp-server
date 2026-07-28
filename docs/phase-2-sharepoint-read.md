@@ -16,6 +16,8 @@ SharePoint Search REST APIへGET要求を送り、設定サイト配下のコン
 - 応答解析時にもURLのHTTPSオリジンとサイトパスを再検証
 - タイトル、URL、種類、更新日時、短い要約だけを返却
 
+Phase 5で、フォルダー・ページ／文書・拡張子・更新日による絞り込み、更新日時順、ページング、親URLなどの探索情報を追加した。詳細は[`phase-5-site-search.md`](phase-5-site-search.md)を参照。
+
 ### `sharepoint_get_page`
 
 SharePointのResourcePath対応REST APIを使い、設定サイトの`SitePages`ライブラリにある`.aspx`ページのリスト項目を取得する。
