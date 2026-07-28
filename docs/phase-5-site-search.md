@@ -78,4 +78,4 @@ SharePoint Search REST APIのGETエンドポイントを使用する。検索語
 - SharePointの検索スキーマ、権限、言語処理、ランキング設定に結果が依存する。
 - `author`、`sizeBytes`、`rank`、`parentUrl`は検索スキーマに値がない場合は省略される。
 - サイト全体の意味要約、ベクトル検索、PageIndexツリーの永続生成は未対応。
-- 文書内の構造化検索は後続フェーズで扱う。
+- 文書内の構造化検索はPhase 6で対応した。詳細は[`phase-6-document-structure.md`](phase-6-document-structure.md)を参照。

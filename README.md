@@ -2,7 +2,7 @@
 
 Entra IDアプリ登録を使用せず、Microsoft Edgeの認証済みセッションからSharePoint Onlineへ読み取り専用で接続するオンプレMCPサーバーです。
 
-Phase 1の認証状態確認、Phase 2の検索・ページ本文取得、Phase 3のファイルアクセス、Phase 4のPDF・Office文書本文抽出に加え、Phase 5ではSharePointサイト横断検索の絞り込みとページングに対応します。
+Phase 1の認証状態確認、Phase 2の検索・ページ本文取得、Phase 3のファイルアクセス、Phase 4のPDF・Office文書本文抽出、Phase 5のSharePointサイト横断検索に加え、Phase 6では文書構造のアウトライン・検索・部分取得に対応します。
 
 ## 目的
 
@@ -25,6 +25,9 @@ Phase 1の認証状態確認、Phase 2の検索・ページ本文取得、Phase 
 - `sharepoint_list_folder`による直下フォルダー・ファイル一覧
 - `sharepoint_download_file`による許可形式・5 MiB以下のファイル取得
 - `sharepoint_extract_document_text`によるPDF・DOCX・XLSX・PPTX本文抽出
+- `sharepoint_get_document_outline`によるページ・見出し・シート・スライドの構造化
+- `sharepoint_search_document`による1文書内のノード検索
+- `sharepoint_get_document_nodes`による選択ノードだけの本文取得
 - `BrowserContext.request`からページ内`fetch`へのフォールバック
 - 設定値、URL制約、レスポンス解析、認証判定、検索、ページ、ファイル、文書抽出の単体テスト
 
@@ -198,6 +201,29 @@ SharePoint自身の検索インデックスを使い、設定済みサイト配�
 - PDF内の文書アクションやOfficeマクロは実行しない
 - スキャンPDFのOCR、数式・図形・画像の意味解析、Excel数式の再計算は行わない
 
+### `sharepoint_get_document_outline`
+
+PDF・DOCX・XLSX・PPTXを共通ノードへ変換し、短いプレビューを持つアウトラインを返します。
+
+- PDFはページ単位
+- Wordは見出し階層と補助部品単位
+- Excelはシート単位
+- PowerPointはスライド単位
+- 各ノードに安定した形式別IDと根拠位置を付与
+- 外部LLM呼び出しやローカルへの自動保存は行わない
+
+### `sharepoint_search_document`
+
+1つのPDF・Office文書内を検索し、関連ノードのID、根拠位置、スコア、短いスニペットを返します。
+
+- 検索語は1〜200文字
+- 最大20件、既定値10件
+- スコアは同一文書・同一呼び出し内の順位付け専用
+
+### `sharepoint_get_document_nodes`
+
+アウトラインまたは文書内検索で得たノードIDを最大20件指定し、その部分だけの本文を返します。合計本文は最大100,000文字です。前回結果の`sha256`を`expectedSha256`へ渡すと、探索中に文書が更新された場合は取得を拒否します。
+
 ## セキュリティ境界
 
 - 対象は設定済みSharePoint Onlineサイトのみ
@@ -209,6 +235,8 @@ SharePoint自身の検索インデックスを使い、設定済みサイト配�
 - バイナリは許可形式と5 MiB上限を満たす場合だけ返却
 - Office ZIPは展開前後のサイズと部品数を制限し、DOCTYPE・ENTITYを拒否
 - 抽出本文を100,000文字に制限
+- 構造化ノードは最大500件、選択ノードは最大20件
+- 文書アウトライン、文書内検索、選択本文を外部LLMや永続インデックスへ送信・保存しない
 - OneDrive、テナントルート、任意URLを拒否
 - MCPツールは読み取り専用、非破壊、冪等として宣言
 - Cookieやトークンを独自ファイルへエクスポートしない
@@ -219,4 +247,5 @@ SharePoint自身の検索インデックスを使い、設定済みサイト配�
 [`docs/phase-2-sharepoint-read.md`](docs/phase-2-sharepoint-read.md)、
 [`docs/phase-3-file-access.md`](docs/phase-3-file-access.md)、
 [`docs/phase-4-document-text.md`](docs/phase-4-document-text.md)、
-[`docs/phase-5-site-search.md`](docs/phase-5-site-search.md)を参照してください。
+[`docs/phase-5-site-search.md`](docs/phase-5-site-search.md)、
+[`docs/phase-6-document-structure.md`](docs/phase-6-document-structure.md)を参照してください。

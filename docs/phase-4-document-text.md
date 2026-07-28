@@ -83,3 +83,5 @@ Open XML ZIPから次のXMLだけを抽出する。
 - Wordの図形、テキストボックス、変更履歴の完全な再現は保証しない。
 - PowerPointの視覚的な配置、図、SmartArt、アニメーションは抽出しない。
 - 抽出順序はファイル内部のXML順であり、画面上の読み順と異なる場合がある。
+
+Phase 6で、文書全体を返さずページ・見出し・シート・スライド単位で探索するアウトライン、文書内検索、選択ノード本文取得を追加した。詳細は[`phase-6-document-structure.md`](phase-6-document-structure.md)を参照。
