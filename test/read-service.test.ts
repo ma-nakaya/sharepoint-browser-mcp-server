@@ -12,14 +12,16 @@ const SITE_URL = "https://example.sharepoint.com/sites/genai";
 class FakeTransport implements SharePointTransport {
   public primaryCalls = 0;
   public fallbackCalls = 0;
+  public lastApiPath: string | undefined;
 
   constructor(
     private readonly primary: SharePointResponse | Error,
     private readonly fallback: SharePointResponse | Error,
   ) {}
 
-  async get(): Promise<SharePointResponse> {
+  async get(apiPath: string): Promise<SharePointResponse> {
     this.primaryCalls += 1;
+    this.lastApiPath = apiPath;
     if (this.primary instanceof Error) {
       throw this.primary;
     }
@@ -70,6 +72,29 @@ test("returns search results from the primary API request", async () => {
   assert.equal(result.returnedRows, 0);
   assert.equal(result.method, "api-request");
   assert.equal(transport.fallbackCalls, 0);
+});
+
+test("passes site-search filters and paging to SharePoint", async () => {
+  const transport = new FakeTransport(
+    response(200, emptySearchBody()),
+    new Error("fallback must not run"),
+  );
+  const service = new SharePointReadService(SITE_URL, transport);
+
+  const result = await service.search("policy", 15, {
+    startRow: 30,
+    scope: "documents",
+    fileExtensions: ["pdf"],
+    sort: "modified-desc",
+  });
+  const url = new URL(transport.lastApiPath ?? "", `${SITE_URL}/`);
+
+  assert.equal(url.searchParams.get("rowlimit"), "15");
+  assert.equal(url.searchParams.get("startrow"), "30");
+  assert.match(url.searchParams.get("querytemplate") ?? "", /FileType:pdf/u);
+  assert.equal(url.searchParams.get("sortlist"), "'LastModifiedTime:descending'");
+  assert.equal(result.startRow, 30);
+  assert.equal(result.scope, "documents");
 });
 
 test("uses browser fetch for a non-JSON primary response", async () => {

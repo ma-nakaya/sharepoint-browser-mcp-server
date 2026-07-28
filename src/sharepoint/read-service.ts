@@ -15,6 +15,7 @@ import {
   normalizeSearchQuery,
   normalizeSearchResultLimit,
   parseSearchResponse,
+  type SharePointSearchOptions,
   type SharePointSearchResult,
 } from "./search.js";
 
@@ -32,6 +33,7 @@ export class SharePointReadService {
   async search(
     query: string,
     maxResults = DEFAULT_SEARCH_RESULTS,
+    options: SharePointSearchOptions = {},
   ): Promise<SharePointSearchResult> {
     const normalizedQuery = normalizeSearchQuery(query);
     const normalizedLimit = normalizeSearchResultLimit(maxResults);
@@ -39,6 +41,7 @@ export class SharePointReadService {
       this.siteUrl,
       normalizedQuery,
       normalizedLimit,
+      options,
     );
     const response = await this.getJson(apiPath, "search");
     return parseSearchResponse(
@@ -46,6 +49,8 @@ export class SharePointReadService {
       this.siteUrl,
       normalizedQuery,
       response.method,
+      normalizedLimit,
+      options,
     );
   }
 

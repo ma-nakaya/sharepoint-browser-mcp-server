@@ -16,7 +16,7 @@ import { registerPageTool } from "./tools/page-tool.js";
 import { registerSearchTool } from "./tools/search-tool.js";
 
 const SERVER_NAME = "sharepoint-browser-mcp-server";
-const SERVER_VERSION = "0.4.0";
+const SERVER_VERSION = "0.5.0";
 
 async function main(): Promise<void> {
   const config = loadConfig();
@@ -34,6 +34,7 @@ async function main(): Promise<void> {
       instructions: [
         "This server is read-only.",
         "Call sharepoint_auth_status before SharePoint operations.",
+        "Use sharepoint_search to find site content before opening pages or extracting documents.",
         "Never request or expose browser cookies, authorization headers, or tokens.",
       ].join(" "),
     },

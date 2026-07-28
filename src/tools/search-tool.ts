@@ -4,8 +4,10 @@ import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import type { SharePointReadService } from "../sharepoint/read-service.js";
 import {
   DEFAULT_SEARCH_RESULTS,
+  MAX_SEARCH_FILE_EXTENSIONS,
   MAX_SEARCH_QUERY_CHARACTERS,
   MAX_SEARCH_RESULTS,
+  MAX_SEARCH_START_ROW,
 } from "../sharepoint/search.js";
 
 export function registerSearchTool(
@@ -17,8 +19,9 @@ export function registerSearchTool(
     {
       title: "Search the configured SharePoint site",
       description: [
-        "Searches content under the configured SharePoint site only.",
-        "Returns titles, SharePoint URLs, content types, modified times, and short summaries.",
+        "Searches pages and files under the configured SharePoint site using SharePoint's own search index.",
+        "Supports folder, content-kind, file-extension, modified-date, sort, and paging controls.",
+        "Use returned page URLs with sharepoint_get_page and PDF/DOCX/XLSX/PPTX URLs with sharepoint_extract_document_text.",
         "This tool is read-only and never returns cookies, tokens, or authorization headers.",
       ].join(" "),
       inputSchema: {
@@ -35,17 +38,75 @@ export function registerSearchTool(
           .max(MAX_SEARCH_RESULTS)
           .optional()
           .describe(`Maximum results to return. Defaults to ${DEFAULT_SEARCH_RESULTS}.`),
+        startRow: z
+          .number()
+          .int()
+          .min(0)
+          .max(MAX_SEARCH_START_ROW)
+          .optional()
+          .describe("Zero-based result offset for paging. Use nextStartRow from a previous result."),
+        scope: z
+          .enum(["all", "pages", "documents"])
+          .optional()
+          .describe("Limit results to SharePoint pages or documents. Defaults to all content."),
+        folderUrl: z
+          .string()
+          .trim()
+          .min(1)
+          .max(2_048)
+          .optional()
+          .describe("Optional absolute or server-relative folder URL under the configured site."),
+        fileExtensions: z
+          .array(
+            z
+              .string()
+              .trim()
+              .min(1)
+              .max(11)
+              .regex(/^\.?[A-Za-z0-9]+$/u),
+          )
+          .max(MAX_SEARCH_FILE_EXTENSIONS)
+          .optional()
+          .describe("Optional extensions such as pdf, docx, xlsx, or pptx. Not valid with pages scope."),
+        modifiedAfter: z
+          .string()
+          .regex(/^\d{4}-\d{2}-\d{2}$/u)
+          .optional()
+          .describe("Only return content modified on or after this YYYY-MM-DD date."),
+        modifiedBefore: z
+          .string()
+          .regex(/^\d{4}-\d{2}-\d{2}$/u)
+          .optional()
+          .describe("Only return content modified on or before this YYYY-MM-DD date."),
+        sort: z
+          .enum(["relevance", "modified-desc"])
+          .optional()
+          .describe("Order by SharePoint relevance or newest modification time."),
       },
       outputSchema: {
         query: z.string(),
         siteUrl: z.string().url(),
         totalRows: z.number().int().nonnegative(),
         returnedRows: z.number().int().nonnegative(),
+        startRow: z.number().int().nonnegative(),
+        hasMore: z.boolean(),
+        nextStartRow: z.number().int().nonnegative().optional(),
+        scope: z.enum(["all", "pages", "documents"]),
+        scopeUrl: z.string().url(),
+        fileExtensions: z.array(z.string()),
+        modifiedAfter: z.string().optional(),
+        modifiedBefore: z.string().optional(),
+        sort: z.enum(["relevance", "modified-desc"]),
         method: z.enum(["api-request", "browser-fetch"]),
         results: z.array(
           z.object({
             title: z.string(),
             url: z.string().url(),
+            kind: z.enum(["page", "document", "file", "other"]),
+            parentUrl: z.string().url().optional(),
+            author: z.string().optional(),
+            sizeBytes: z.number().int().nonnegative().optional(),
+            rank: z.number().optional(),
             fileExtension: z.string().optional(),
             contentClass: z.string().optional(),
             modifiedTime: z.string().optional(),
@@ -60,10 +121,29 @@ export function registerSearchTool(
         openWorldHint: false,
       },
     },
-    async ({ query, maxResults }) => {
+    async ({
+      query,
+      maxResults,
+      startRow,
+      scope,
+      folderUrl,
+      fileExtensions,
+      modifiedAfter,
+      modifiedBefore,
+      sort,
+    }) => {
       const result = await service.search(
         query,
         maxResults ?? DEFAULT_SEARCH_RESULTS,
+        {
+          ...(startRow !== undefined ? { startRow } : {}),
+          ...(scope ? { scope } : {}),
+          ...(folderUrl ? { folderUrl } : {}),
+          ...(fileExtensions ? { fileExtensions } : {}),
+          ...(modifiedAfter ? { modifiedAfter } : {}),
+          ...(modifiedBefore ? { modifiedBefore } : {}),
+          ...(sort ? { sort } : {}),
+        },
       );
       return {
         content: [{ type: "text" as const, text: JSON.stringify(result, null, 2) }],
