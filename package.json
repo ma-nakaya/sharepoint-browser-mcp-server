@@ -1,6 +1,6 @@
 {
   "name": "sharepoint-browser-mcp-server",
-  "version": "0.5.0",
+  "version": "0.6.0",
   "description": "Read-only SharePoint MCP server using an authenticated Microsoft Edge session without Entra app registration.",
   "type": "module",
   "private": true,

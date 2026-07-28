@@ -39,3 +39,59 @@ test("combines SharePoint file metadata with extracted text", async () => {
   assert.match(result.text, /Policy text/u);
   assert.equal(result.characters, result.text.length);
 });
+
+test("combines file identity with outline, search, and selected nodes", async () => {
+  const data = zipSync({
+    "word/document.xml": strToU8(
+      [
+        '<w:document xmlns:w="urn:w"><w:body>',
+        '<w:p><w:pPr><w:pStyle w:val="Heading1"/></w:pPr><w:t>Security</w:t></w:p>',
+        "<w:p><w:t>Use least privilege</w:t></w:p>",
+        "</w:body></w:document>",
+      ].join(""),
+    ),
+  });
+  const fileService = {
+    downloadFile: async () => ({
+      name: "Security.docx",
+      url: "https://example.sharepoint.com/sites/genai/Documents/Security.docx",
+      serverRelativeUrl: "/sites/genai/Documents/Security.docx",
+      extension: ".docx",
+      sizeBytes: data.byteLength,
+      mimeType:
+        "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+      sha256: "b".repeat(64),
+      method: "browser-fetch" as const,
+      data,
+    }),
+  };
+  const service = new SharePointDocumentService(
+    fileService as unknown as SharePointFileService,
+  );
+
+  const outline = await service.getOutline("/sites/genai/Documents/Security.docx");
+  const search = await service.search(
+    "/sites/genai/Documents/Security.docx",
+    "least privilege",
+  );
+  const selected = await service.getNodes(
+    "/sites/genai/Documents/Security.docx",
+    ["section-0001"],
+    "B".repeat(64),
+  );
+
+  assert.equal(outline.sha256, "b".repeat(64));
+  assert.equal(outline.method, "browser-fetch");
+  assert.equal(outline.nodes[0]?.title, "Security");
+  assert.equal(search.results[0]?.nodeId, "section-0001");
+  assert.match(selected.nodes[0]?.text ?? "", /least privilege/u);
+  await assert.rejects(
+    () =>
+      service.getNodes(
+        "/sites/genai/Documents/Security.docx",
+        ["section-0001"],
+        "c".repeat(64),
+      ),
+    /document changed/u,
+  );
+});

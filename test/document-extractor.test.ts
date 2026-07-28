@@ -4,8 +4,11 @@ import test from "node:test";
 import { strToU8, zipSync } from "fflate";
 
 import {
+  extractDocumentNodes,
+  extractDocumentOutline,
   extractDocumentText,
   MAX_EXTRACTED_TEXT_CHARACTERS,
+  searchDocumentStructure,
 } from "../src/sharepoint/document-extractor.js";
 
 test("extracts text from a PDF page", async () => {
@@ -16,6 +19,23 @@ test("extracts text from a PDF page", async () => {
   assert.equal(result.unitCount, 1);
   assert.match(result.text, /\[Page 1\]/u);
   assert.match(result.text, /Hello PDF/u);
+});
+
+test("creates and selects stable PDF page nodes", async () => {
+  const data = createMinimalPdf("Hello structured PDF");
+
+  const outline = await extractDocumentOutline(data, ".pdf");
+  const selected = await extractDocumentNodes(data, ".pdf", ["page-0001"]);
+  const search = await searchDocumentStructure(data, ".pdf", "structured");
+
+  assert.equal(outline.nodeCount, 1);
+  assert.equal(outline.nodes[0]?.nodeId, "page-0001");
+  assert.equal(outline.nodes[0]?.locator, "page:1");
+  assert.match(outline.nodes[0]?.preview ?? "", /structured PDF/u);
+  assert.equal(selected.returnedNodes, 1);
+  assert.match(selected.nodes[0]?.text ?? "", /Hello structured PDF/u);
+  assert.equal(search.results[0]?.nodeId, "page-0001");
+  assert.match(search.results[0]?.snippet ?? "", /structured/u);
 });
 
 test("extracts DOCX body and header text while dropping deleted text", async () => {
@@ -42,6 +62,46 @@ test("extracts DOCX body and header text while dropping deleted text", async () 
   assert.match(result.text, /Visible/u);
   assert.match(result.text, /Header/u);
   assert.doesNotMatch(result.text, /Deleted secret|FIELD CODE/u);
+});
+
+test("builds a nested DOCX heading outline and searches focused sections", async () => {
+  const archive = zipXml({
+    "word/document.xml": [
+      '<w:document xmlns:w="urn:w"><w:body>',
+      '<w:p><w:pPr><w:pStyle w:val="Heading1"/></w:pPr><w:r><w:t>Policy</w:t></w:r></w:p>',
+      "<w:p><w:r><w:t>General policy text</w:t></w:r></w:p>",
+      '<w:p><w:pPr><w:pStyle w:val="Heading2"/></w:pPr><w:r><w:t>Exceptions</w:t></w:r></w:p>',
+      "<w:p><w:r><w:t>Special approval details</w:t></w:r></w:p>",
+      '<w:p><w:pPr><w:pStyle w:val="Heading1"/></w:pPr><w:r><w:t>Contacts</w:t></w:r></w:p>',
+      "<w:p><w:r><w:t>Contact the owner</w:t></w:r></w:p>",
+      "</w:body></w:document>",
+    ].join(""),
+    "word/header1.xml":
+      '<w:hdr xmlns:w="urn:w"><w:p><w:r><w:t>Confidential</w:t></w:r></w:p></w:hdr>',
+  });
+
+  const outline = await extractDocumentOutline(archive, ".docx");
+  const search = await searchDocumentStructure(
+    archive,
+    ".docx",
+    "Special approval",
+  );
+  const selected = await extractDocumentNodes(
+    archive,
+    ".docx",
+    ["section-0002", "part-0001"],
+  );
+
+  assert.equal(outline.nodes[0]?.title, "Policy");
+  assert.equal(outline.nodes[0]?.children[0]?.title, "Exceptions");
+  assert.equal(outline.nodes[1]?.title, "Contacts");
+  assert.equal(outline.nodes[2]?.kind, "part");
+  assert.equal(outline.nodes[2]?.locator, "part:header1");
+  assert.equal(search.matchedNodes, 1);
+  assert.equal(search.results[0]?.nodeId, "section-0002");
+  assert.match(search.results[0]?.snippet ?? "", /Special approval details/u);
+  assert.match(selected.nodes[0]?.text ?? "", /Exceptions[\s\S]*Special approval/u);
+  assert.match(selected.nodes[1]?.text ?? "", /Confidential/u);
 });
 
 test("extracts XLSX sheet names, shared strings, and booleans", async () => {
@@ -77,6 +137,39 @@ test("extracts XLSX sheet names, shared strings, and booleans", async () => {
   assert.match(result.text, /D1: 42/u);
 });
 
+test("creates searchable XLSX sheet nodes", async () => {
+  const archive = zipXml({
+    "xl/workbook.xml": [
+      '<workbook xmlns:r="urn:r"><sheets>',
+      '<sheet name="Budget" sheetId="1" r:id="rId1"/>',
+      '<sheet name="Risks" sheetId="2" r:id="rId2"/>',
+      "</sheets></workbook>",
+    ].join(""),
+    "xl/_rels/workbook.xml.rels": [
+      "<Relationships>",
+      '<Relationship Id="rId1" Target="worksheets/sheet1.xml"/>',
+      '<Relationship Id="rId2" Target="worksheets/sheet2.xml"/>',
+      "</Relationships>",
+    ].join(""),
+    "xl/worksheets/sheet1.xml":
+      '<worksheet><sheetData><row><c r="A1" t="inlineStr"><is><t>Revenue</t></is></c></row></sheetData></worksheet>',
+    "xl/worksheets/sheet2.xml":
+      '<worksheet><sheetData><row><c r="A1" t="inlineStr"><is><t>Supply risk</t></is></c></row></sheetData></worksheet>',
+  });
+
+  const outline = await extractDocumentOutline(archive, ".xlsx");
+  const search = await searchDocumentStructure(archive, ".xlsx", "Supply risk");
+
+  assert.deepEqual(
+    outline.nodes.map((node) => [node.nodeId, node.title, node.locator]),
+    [
+      ["sheet-0001", "Budget", "sheet:Budget"],
+      ["sheet-0002", "Risks", "sheet:Risks"],
+    ],
+  );
+  assert.equal(search.results[0]?.nodeId, "sheet-0002");
+});
+
 test("extracts PPTX slide and speaker-note text", async () => {
   const archive = zipXml({
     "ppt/slides/slide1.xml":
@@ -92,6 +185,46 @@ test("extracts PPTX slide and speaker-note text", async () => {
   assert.equal(result.unitCount, 1);
   assert.match(result.text, /\[Slide 1\][\s\S]*Slide title/u);
   assert.match(result.text, /\[Notes 1\][\s\S]*Speaker note/u);
+});
+
+test("creates PPTX slide nodes with titles and notes", async () => {
+  const archive = zipXml({
+    "ppt/slides/slide1.xml":
+      '<p:sld xmlns:p="urn:p" xmlns:a="urn:a"><a:p><a:r><a:t>Architecture</a:t></a:r></a:p><a:p><a:r><a:t>Search flow</a:t></a:r></a:p></p:sld>',
+    "ppt/notesSlides/notesSlide1.xml":
+      '<p:notes xmlns:p="urn:p" xmlns:a="urn:a"><a:p><a:r><a:t>Explain permissions</a:t></a:r></a:p></p:notes>',
+  });
+
+  const outline = await extractDocumentOutline(archive, ".pptx");
+  const selected = await extractDocumentNodes(
+    archive,
+    ".pptx",
+    ["slide-0001"],
+  );
+
+  assert.equal(outline.nodes[0]?.title, "Slide 1 — Architecture");
+  assert.equal(outline.nodes[0]?.locator, "slide:1");
+  assert.match(selected.nodes[0]?.text ?? "", /Notes:[\s\S]*Explain permissions/u);
+});
+
+test("validates document node selections and structured search limits", async () => {
+  const archive = zipXml({
+    "word/document.xml":
+      '<w:document xmlns:w="urn:w"><w:body><w:p><w:t>Policy text</w:t></w:p></w:body></w:document>',
+  });
+
+  await assert.rejects(
+    () => extractDocumentNodes(archive, ".docx", ["invalid"]),
+    /server-generated node format/u,
+  );
+  await assert.rejects(
+    () => extractDocumentNodes(archive, ".docx", ["section-9999"]),
+    /Unknown document node ID/u,
+  );
+  await assert.rejects(
+    () => searchDocumentStructure(archive, ".docx", " "),
+    /must not be empty/u,
+  );
 });
 
 test("limits extracted text to the configured character cap", async () => {
