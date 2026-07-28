@@ -1,4 +1,5 @@
 import type { RequestMethod } from "./http.js";
+import { encodeResourcePathArgument } from "./resource-path.js";
 
 export const MAX_PAGE_TEXT_CHARACTERS = 50_000;
 
@@ -73,10 +74,7 @@ export function normalizeSharePointPageUrl(
 }
 
 export function buildPageContentApiPath(serverRelativeUrl: string): string {
-  const escapedPath = serverRelativeUrl.replaceAll("'", "''");
-  const encodedPath = encodeURIComponent(escapedPath)
-    .replaceAll("%2F", "/")
-    .replaceAll("'", "%27");
+  const encodedPath = encodeResourcePathArgument(serverRelativeUrl);
   const selectProperties = "Title,FileRef,CanvasContent1,Modified";
   return [
     `/_api/web/GetFileByServerRelativePath(decodedUrl='${encodedPath}')`,
