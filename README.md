@@ -2,7 +2,7 @@
 
 Entra IDアプリ登録を使用せず、Microsoft Edgeの認証済みセッションからSharePoint Onlineへ読み取り専用で接続するオンプレMCPサーバーです。
 
-Phase 1の認証状態確認、Phase 2のサイト内検索とページ本文取得に加え、Phase 3ではドキュメントライブラリとフォルダーの一覧、制限付きファイルダウンロードに対応します。
+Phase 1の認証状態確認、Phase 2の検索・ページ本文取得、Phase 3のファイルアクセスに加え、Phase 4ではPDFとOpen XML Office文書の本文抽出に対応します。
 
 ## 目的
 
@@ -24,13 +24,15 @@ Phase 1の認証状態確認、Phase 2のサイト内検索とページ本文取
 - `sharepoint_list_document_libraries`による可視ドキュメントライブラリ一覧
 - `sharepoint_list_folder`による直下フォルダー・ファイル一覧
 - `sharepoint_download_file`による許可形式・5 MiB以下のファイル取得
+- `sharepoint_extract_document_text`によるPDF・DOCX・XLSX・PPTX本文抽出
 - `BrowserContext.request`からページ内`fetch`へのフォールバック
-- 設定値、URL制約、レスポンス解析、認証判定、検索・ページ取得の単体テスト
+- 設定値、URL制約、レスポンス解析、認証判定、検索、ページ、ファイル、文書抽出の単体テスト
 
 ## 対象外
 
 - リスト項目の汎用取得
-- Office文書解析
+- OCR、画像内文字認識
+- 旧Officeバイナリ形式（DOC、XLS、PPT）
 - 書き込み、アップロード、更新、削除
 - OneDrive
 - Secure MCP Tunnel
@@ -178,6 +180,19 @@ MCP結果には、表示名とサイトURLだけを含めます。メールア�
 - SharePointメタデータと実データのサイズを照合
 - SHA-256をメタデータとして返却
 
+### `sharepoint_extract_document_text`
+
+設定済みサイトのPDF・DOCX・XLSX・PPTXを取得し、プレーンテキストとして返します。
+
+- 抽出本文は最大100,000文字
+- PDFは最大200ページ
+- DOCXは本文、ヘッダー、フッター、脚注、文末脚注を抽出
+- XLSXはシート名とセルの保存値を抽出
+- PPTXはスライド本文と対応可能なスピーカーノートを抽出
+- Office ZIPは最大1,000部品、対象XML 1部品2 MiB、対象XML合計8 MiB
+- PDF内の文書アクションやOfficeマクロは実行しない
+- スキャンPDFのOCR、数式・図形・画像の意味解析、Excel数式の再計算は行わない
+
 ## セキュリティ境界
 
 - 対象は設定済みSharePoint Onlineサイトのみ
@@ -186,6 +201,8 @@ MCP結果には、表示名とサイトURLだけを含めます。メールア�
 - 検索結果URLを再検証し、設定サイト外の結果を除外
 - フォルダー・ファイルURLとSharePoint応答パスを再検証
 - バイナリは許可形式と5 MiB上限を満たす場合だけ返却
+- Office ZIPは展開前後のサイズと部品数を制限し、DOCTYPE・ENTITYを拒否
+- 抽出本文を100,000文字に制限
 - OneDrive、テナントルート、任意URLを拒否
 - MCPツールは読み取り専用、非破壊、冪等として宣言
 - Cookieやトークンを独自ファイルへエクスポートしない
@@ -194,4 +211,5 @@ MCP結果には、表示名とサイトURLだけを含めます。メールア�
 
 詳細は[`docs/phase-1-authentication.md`](docs/phase-1-authentication.md)、
 [`docs/phase-2-sharepoint-read.md`](docs/phase-2-sharepoint-read.md)、
-[`docs/phase-3-file-access.md`](docs/phase-3-file-access.md)を参照してください。
+[`docs/phase-3-file-access.md`](docs/phase-3-file-access.md)、
+[`docs/phase-4-document-text.md`](docs/phase-4-document-text.md)を参照してください。

@@ -121,6 +121,7 @@ export class SharePointFileService {
       name: metadata.name,
       url: metadata.url,
       serverRelativeUrl: metadata.serverRelativeUrl,
+      extension: metadata.extension,
       sizeBytes: metadata.sizeBytes,
       mimeType: metadata.mimeType,
       sha256,

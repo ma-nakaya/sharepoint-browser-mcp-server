@@ -79,6 +79,7 @@ export interface SharePointDownloadedFile {
   readonly name: string;
   readonly url: string;
   readonly serverRelativeUrl: string;
+  readonly extension: string;
   readonly sizeBytes: number;
   readonly mimeType: string;
   readonly sha256: string;
