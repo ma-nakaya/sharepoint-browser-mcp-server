@@ -1,4 +1,5 @@
 import type { SharePointDocumentService } from "./document-service.js";
+import { isSharePointListItemFormUrl } from "./list-item-content.js";
 import type { SharePointReadService } from "./read-service.js";
 import { MAX_SEARCH_RESULTS } from "./search.js";
 
@@ -31,7 +32,10 @@ export interface ChatGptFetchResult {
   readonly metadata: Readonly<Record<string, ChatGptFetchMetadataValue>>;
 }
 
-type ReadService = Pick<SharePointReadService, "search" | "getPage">;
+type ReadService = Pick<
+  SharePointReadService,
+  "search" | "getPage" | "getListItem"
+>;
 type DocumentService = Pick<SharePointDocumentService, "extractText">;
 
 export class ChatGptKnowledgeService {
@@ -61,6 +65,28 @@ export class ChatGptKnowledgeService {
     }
 
     const extension = getPathExtension(normalizedId);
+    if (
+      extension === "aspx" &&
+      isSharePointListItemFormUrl(normalizedId)
+    ) {
+      const item = await this.readService.getListItem(normalizedId);
+      return {
+        id: item.url,
+        title: item.title,
+        text: item.text,
+        url: item.url,
+        metadata: {
+          source: "sharepoint",
+          kind: "list-item",
+          serverRelativeListUrl: item.serverRelativeListUrl,
+          itemId: item.itemId,
+          fieldCount: item.fieldCount,
+          ...(item.modifiedTime ? { modifiedTime: item.modifiedTime } : {}),
+          truncated: item.truncated,
+        },
+      };
+    }
+
     if (extension === "aspx") {
       const page = await this.readService.getPage(normalizedId);
       return {
@@ -100,7 +126,7 @@ export class ChatGptKnowledgeService {
     }
 
     throw new Error(
-      "Knowledge item ID must identify a SharePoint page or a supported PDF, DOCX, XLSX, or PPTX document.",
+      "Knowledge item ID must identify a SharePoint page, list item, or a supported PDF, DOCX, XLSX, or PPTX document.",
     );
   }
 }

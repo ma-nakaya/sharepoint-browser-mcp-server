@@ -10,6 +10,12 @@ import {
   type SharePointPageContent,
 } from "./page-content.js";
 import {
+  buildListItemContentApiPath,
+  normalizeSharePointListItemUrl,
+  parseListItemContentResponse,
+  type SharePointListItemContent,
+} from "./list-item-content.js";
+import {
   buildSearchApiPath,
   DEFAULT_SEARCH_RESULTS,
   normalizeSearchQuery,
@@ -59,6 +65,13 @@ export class SharePointReadService {
     const apiPath = buildPageContentApiPath(page.serverRelativeUrl);
     const response = await this.getJson(apiPath, "page");
     return parsePageContentResponse(response.body, page, response.method);
+  }
+
+  async getListItem(itemUrl: string): Promise<SharePointListItemContent> {
+    const item = normalizeSharePointListItemUrl(this.siteUrl, itemUrl);
+    const apiPath = buildListItemContentApiPath(item);
+    const response = await this.getJson(apiPath, "list item");
+    return parseListItemContentResponse(response.body, item, response.method);
   }
 
   private async getJson(apiPath: string, resourceName: string): Promise<JsonResponse> {

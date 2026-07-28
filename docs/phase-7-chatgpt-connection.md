@@ -14,14 +14,15 @@
 
 - 入力は`query`文字列だけ
 - SharePoint自身の検索インデックスを使用
-- `SitePages`ページとPDF、DOCX、XLSX、PPTXだけを返却
+- `SitePages`ページ、`Lists`のリスト項目、PDF、DOCX、XLSX、PPTXだけを返却
 - 各結果は`id`、`title`、引用可能な絶対`url`を持つ
 - 最大10件
 
 ### `fetch`
 
 - 入力は`search`が返した`id`だけ
-- `.aspx`ページは作成済み本文を取得
+- `SitePages`の`.aspx`ページは作成済み本文を取得
+- `Lists/<リスト名>/DispForm.aspx?ID=...`はリスト項目の表示用フィールドを取得
 - PDF、DOCX、XLSX、PPTXは既存の安全な文書抽出処理を使用
 - `id`、`title`、`text`、`url`、`metadata`を返却
 - 設定済みサイト外のURLと未対応形式は既存のURL境界で拒否
@@ -57,7 +58,7 @@ npm run build
 ### 3. トンネルプロファイルを初期化
 
 ```powershell
-npm run tunnel:init -- -TunnelId tunnel_0123456789abcdef0123456789abcdef
+npm run tunnel:init -- -TunnelId tunnel_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 ```
 
 既定プロファイル名は`sharepoint-browser-chatgpt`です。スクリプトは現在のプロセス、`.env.local`、`.env`の順にキーを探し、`OPENAI_API_KEY`をプロセス内だけで`CONTROL_PLANE_API_KEY`として再利用します。キー値を引数、ログ、プロファイルへ出力しません。
@@ -98,6 +99,14 @@ npm run tunnel:install-task
 
 タスクは既存の`gh-cli`、`outlook-com`プロファイルやタスクを変更せず、`sharepoint-browser-chatgpt`プロファイルだけを使用します。
 
+ビルド後や設定変更後に常駐Tunnelを再起動する場合は、子プロセスを含めて単一インスタンスへ整理する専用コマンドを使用します。
+
+```powershell
+npm run tunnel:restart-task
+```
+
+タスクスケジューラ画面から短時間に停止・起動を繰り返すと、VBSの子`TunnelClient`が残る場合があります。専用コマンドは対象プロファイルのプロセスツリーだけを停止し、起動後のTunnel数が1つであることを検証します。
+
 ## ChatGPT側の設定
 
 1. ChatGPTで`Settings → Security and login → Developer mode`を有効化
@@ -112,6 +121,8 @@ npm run tunnel:install-task
 ## 確認用プロンプト
 
 - 「SharePointで安全衛生方針を検索して」
+- 「05 国内出張旅費規程を検索して本文を取得して」
+- 「07 海外出張旅費規程を検索して本文を取得して」
 - 「その検索結果の本文を取得し、出典付きで要約して」
 - 「SharePointにある今年度計画についてDeep Researchして」
 - 「SharePointへファイルをアップロードして」— 読み取り専用のため実行されないこと

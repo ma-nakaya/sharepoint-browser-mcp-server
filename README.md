@@ -2,7 +2,7 @@
 
 Entra IDアプリ登録を使用せず、Microsoft Edgeの認証済みセッションからSharePoint Onlineへ読み取り専用で接続するオンプレMCPサーバーです。
 
-Phase 1の認証状態確認、Phase 2の検索・ページ本文取得、Phase 3のファイルアクセス、Phase 4のPDF・Office文書本文抽出、Phase 5のSharePointサイト横断検索、Phase 6の文書構造検索に加え、Phase 7ではSecure MCP Tunnel経由のChatGPT接続と会社知識互換の検索・取得に対応します。
+Phase 1の認証状態確認、Phase 2の検索・ページ本文取得、Phase 3のファイルアクセス、Phase 4のPDF・Office文書本文抽出、Phase 5のSharePointサイト横断検索、Phase 6の文書構造検索、Phase 7のChatGPT接続に加え、Phase 8ではSharePointリスト項目の本文取得に対応します。
 
 ## 目的
 
@@ -30,6 +30,7 @@ Phase 1の認証状態確認、Phase 2の検索・ページ本文取得、Phase 
 - `sharepoint_search_document`による1文書内のノード検索
 - `sharepoint_get_document_nodes`による選択ノードだけの本文取得
 - `search`と`fetch`によるChatGPT会社知識・Deep Research互換
+- `Lists/.../DispForm.aspx?ID=...`で表されるSharePointリスト項目の本文取得
 - `BrowserContext.request`からページ内`fetch`へのフォールバック
 - 設定値、URL制約、レスポンス解析、認証判定、検索、ページ、ファイル、文書抽出の単体テスト
 
@@ -131,15 +132,16 @@ stdioクライアントの設定例:
 
 ### `search` / `fetch`
 
-ChatGPTの会社知識・Deep Research互換ツールです。`search`は設定済みSharePointサイトから引用可能なページと対応文書を検索し、`fetch`は返されたIDの本文と引用URLを取得します。
+ChatGPTの会社知識・Deep Research互換ツールです。`search`は設定済みSharePointサイトから引用可能なページ、リスト項目、対応文書を検索し、`fetch`は返されたIDの本文と引用URLを取得します。
 
 - `search`入力: `query`
 - `search`出力: `id`、`title`、絶対`url`を持つ最大10件の`results`
 - `fetch`入力: `search`が返した`id`
 - `fetch`出力: `id`、`title`、`text`、`url`、`metadata`
-- 対応対象: `SitePages`の`.aspx`、PDF、DOCX、XLSX、PPTX
+- 対応対象: `SitePages`の`.aspx`、`Lists`直下の`DispForm.aspx?ID=...`、PDF、DOCX、XLSX、PPTX
+- 規程・規則は文書ファイルとは限らないため、最初に正確な名称を`search`へ渡す
 
-ChatGPTとの接続方法は[`docs/phase-7-chatgpt-connection.md`](docs/phase-7-chatgpt-connection.md)を参照してください。
+ChatGPTとの接続方法は[`docs/phase-7-chatgpt-connection.md`](docs/phase-7-chatgpt-connection.md)、リスト項目取得は[`docs/phase-8-list-item-fetch.md`](docs/phase-8-list-item-fetch.md)を参照してください。
 
 ### `sharepoint_auth_status`
 
@@ -243,6 +245,7 @@ PDF・DOCX・XLSX・PPTXを共通ノードへ変換し、短いプレビュー�
 - 対象は設定済みSharePoint Onlineサイトのみ
 - REST要求は対象サイト配下の`/_api/`のみ
 - ページ取得は設定サイトの`SitePages`配下にある`.aspx`だけを許可
+- リスト項目取得は設定サイトの`Lists/<リスト名>/DispForm.aspx`と単一の正の整数`ID`だけを許可
 - 検索結果URLを再検証し、設定サイト外の結果を除外
 - 検索対象フォルダー、拡張子、更新日の入力を検証し、検索結果の親URLもサイト境界と照合
 - フォルダー・ファイルURLとSharePoint応答パスを再検証
@@ -263,4 +266,5 @@ PDF・DOCX・XLSX・PPTXを共通ノードへ変換し、短いプレビュー�
 [`docs/phase-4-document-text.md`](docs/phase-4-document-text.md)、
 [`docs/phase-5-site-search.md`](docs/phase-5-site-search.md)、
 [`docs/phase-6-document-structure.md`](docs/phase-6-document-structure.md)、
-[`docs/phase-7-chatgpt-connection.md`](docs/phase-7-chatgpt-connection.md)を参照してください。
+[`docs/phase-7-chatgpt-connection.md`](docs/phase-7-chatgpt-connection.md)、
+[`docs/phase-8-list-item-fetch.md`](docs/phase-8-list-item-fetch.md)を参照してください。

@@ -18,6 +18,8 @@ $controlPlaneApiKey = [Environment]::GetEnvironmentVariable(
   "User"
 )
 
+. (Join-Path $PSScriptRoot "tunnel-task-processes.ps1")
+
 if (-not (Test-Path -LiteralPath $launcherSource)) {
   throw "VBS launcher was not found: $launcherSource"
 }
@@ -30,6 +32,13 @@ if (-not (Test-Path -LiteralPath $profilePath)) {
 if (-not $controlPlaneApiKey -or -not $controlPlaneApiKey.Trim()) {
   throw "CONTROL_PLANE_API_KEY is not set in the current user's environment."
 }
+
+$existingTask = Get-ScheduledTask -TaskName $TaskName -ErrorAction SilentlyContinue
+if ($existingTask -and $existingTask.State -ne "Ready") {
+  Stop-ScheduledTask -TaskName $TaskName
+  Start-Sleep -Seconds 2
+}
+Stop-SharePointTunnelProcessTree -TunnelClientPath $tunnelClient | Out-Null
 
 Copy-Item -LiteralPath $launcherSource -Destination $launcherDestination -Force
 
@@ -64,5 +73,21 @@ Register-ScheduledTask `
 
 Start-ScheduledTask -TaskName $TaskName
 
-Get-ScheduledTask -TaskName $TaskName |
-  Select-Object TaskName, State
+$running = @()
+for ($attempt = 0; $attempt -lt 10; $attempt += 1) {
+  Start-Sleep -Seconds 1
+  $running = @(Get-SharePointTunnelRootProcesses -TunnelClientPath $tunnelClient)
+  if ($running.Count -gt 0) {
+    break
+  }
+}
+if ($running.Count -ne 1) {
+  throw "Expected one SharePoint tunnel process after installation, found $($running.Count)."
+}
+
+[pscustomobject]@{
+  TaskName = $TaskName
+  State = (Get-ScheduledTask -TaskName $TaskName).State
+  RunningTunnelRoots = $running.Count
+  ProcessId = $running[0].ProcessId
+}
