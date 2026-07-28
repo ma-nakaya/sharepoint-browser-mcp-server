@@ -4,6 +4,7 @@ export interface SharePointResponse {
   readonly status: number;
   readonly contentType: string;
   readonly body: string;
+  readonly bodyTruncated?: boolean;
   readonly method: RequestMethod;
 }
 

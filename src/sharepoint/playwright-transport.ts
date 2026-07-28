@@ -7,7 +7,7 @@ import type { SharePointResponse, SharePointTransport } from "./http.js";
 import { buildSharePointApiUrl } from "./url-guard.js";
 
 const ACCEPT_JSON = "application/json;odata=nometadata";
-const MAX_RESPONSE_CHARACTERS = 65_536;
+const MAX_RESPONSE_CHARACTERS = 1_048_576;
 
 export class PlaywrightSharePointTransport implements SharePointTransport {
   constructor(
@@ -49,7 +49,7 @@ export class PlaywrightSharePointTransport implements SharePointTransport {
       }
 
       const result = await page.evaluate(
-        async ({ targetUrl, expectedOrigin, timeoutMs }) => {
+        async ({ targetUrl, expectedOrigin, timeoutMs, maxResponseCharacters }) => {
           const controller = new AbortController();
           const timeout = setTimeout(() => controller.abort(), timeoutMs);
           try {
@@ -65,6 +65,7 @@ export class PlaywrightSharePointTransport implements SharePointTransport {
                 status: 0,
                 contentType: "",
                 body: "",
+                bodyTruncated: false,
                 redirectedOutsideSite: true,
               };
             }
@@ -73,10 +74,12 @@ export class PlaywrightSharePointTransport implements SharePointTransport {
             const contentType = response.headers.get("content-type") ?? "";
             const shouldReadBody =
               response.status === 200 && contentType.toLowerCase().includes("json");
+            const responseBody = shouldReadBody ? await response.text() : "";
             return {
               status: response.status,
               contentType,
-              body: shouldReadBody ? (await response.text()).slice(0, 65_536) : "",
+              body: responseBody.slice(0, maxResponseCharacters),
+              bodyTruncated: responseBody.length > maxResponseCharacters,
               redirectedOutsideSite: responseUrl.origin !== expectedOrigin,
             };
           } finally {
@@ -87,6 +90,7 @@ export class PlaywrightSharePointTransport implements SharePointTransport {
           targetUrl: target.toString(),
           expectedOrigin: this.config.siteOrigin,
           timeoutMs: this.config.requestTimeoutMs,
+          maxResponseCharacters: MAX_RESPONSE_CHARACTERS,
         },
       );
 
@@ -94,6 +98,7 @@ export class PlaywrightSharePointTransport implements SharePointTransport {
         status: result.redirectedOutsideSite ? 0 : result.status,
         contentType: result.contentType,
         body: result.body,
+        bodyTruncated: result.bodyTruncated,
         method: "browser-fetch",
       };
     } finally {
@@ -132,12 +137,12 @@ export class PlaywrightSharePointTransport implements SharePointTransport {
     const headers = response.headers();
     const contentType = headers["content-type"] ?? "";
     const shouldReadBody = status === 200 && contentType.toLowerCase().includes("json");
+    const responseBody = shouldReadBody ? await response.text() : "";
     return {
       status,
       contentType,
-      body: shouldReadBody
-        ? (await response.text()).slice(0, MAX_RESPONSE_CHARACTERS)
-        : "",
+      body: responseBody.slice(0, MAX_RESPONSE_CHARACTERS),
+      bodyTruncated: responseBody.length > MAX_RESPONSE_CHARACTERS,
       method: "api-request",
     };
   }

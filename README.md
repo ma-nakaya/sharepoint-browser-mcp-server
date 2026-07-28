@@ -2,7 +2,7 @@
 
 Entra IDアプリ登録を使用せず、Microsoft Edgeの認証済みセッションからSharePoint Onlineへ読み取り専用で接続するオンプレMCPサーバーです。
 
-Phase 1では、Playwrightのpersistent contextでMCP専用Edgeプロファイルを管理し、`/_api/web/currentuser`を使って認証状態を確認します。SharePoint検索、ページ取得、ファイル取得は後続フェーズで追加します。
+Phase 1の認証状態確認に加え、Phase 2では設定済みサイト内の検索と、`SitePages`ライブラリにあるSharePointページの本文取得に対応します。
 
 ## 目的
 
@@ -12,20 +12,22 @@ Phase 1では、Playwrightのpersistent contextでMCP専用Edgeプロファイ�
 - SharePoint REST APIを読み取り専用で利用する
 - Cookie、トークン、Authorizationヘッダーをアプリケーションへ取り出さない
 
-## Phase 1の範囲
+## 対応範囲
 
 - TypeScriptのstdio MCPサーバー
 - MCP専用Edgeプロファイル
 - 初回・再認証用のheadedログインコマンド
 - `sharepoint_auth_status` MCPツール
 - `/_api/web/currentuser`による認証確認
+- `sharepoint_search`による設定済みサイト内の検索
+- `sharepoint_get_page`による`SitePages`内の`.aspx`ページ本文取得
 - `BrowserContext.request`からページ内`fetch`へのフォールバック
-- 設定値、URL制約、レスポンス解析、認証判定の単体テスト
+- 設定値、URL制約、レスポンス解析、認証判定、検索・ページ取得の単体テスト
 
 ## 対象外
 
-- SharePoint検索
-- ページ、リスト、ファイル取得
+- リスト項目の汎用取得
+- ファイル一覧・ダウンロード
 - Office文書解析
 - 書き込み、アップロード、更新、削除
 - OneDrive
@@ -134,14 +136,35 @@ stdioクライアントの設定例:
 
 MCP結果には、表示名とサイトURLだけを含めます。メールアドレス、ログイン名、Cookie、トークン、レスポンス本文は返しません。
 
+### `sharepoint_search`
+
+設定済みSharePointサイト配下をキーワード検索します。
+
+- 入力: `query`、任意の`maxResults`（1〜20、既定値10）
+- 出力: タイトル、URL、ファイル拡張子、コンテンツ種別、更新日時、短い要約
+- 検索APIの結果に設定サイト外のURLが含まれても、MCP結果から除外
+
+### `sharepoint_get_page`
+
+設定済みサイトの`SitePages`ライブラリにある`.aspx`ページから、作成済み本文をプレーンテキストで取得します。
+
+- 入力: 絶対URLまたはサーバー相対URL
+- 出力: タイトル、URL、更新日時、本文、切り詰め有無
+- 本文は最大50,000文字
+- 生の`CanvasContent1` HTML、Webパーツ設定、スクリプト、スタイルは返却しない
+- 動的Webパーツが実行時に表示するデータは対象外
+
 ## セキュリティ境界
 
 - 対象は設定済みSharePoint Onlineサイトのみ
 - REST要求は対象サイト配下の`/_api/`のみ
+- ページ取得は設定サイトの`SitePages`配下にある`.aspx`だけを許可
+- 検索結果URLを再検証し、設定サイト外の結果を除外
 - OneDrive、テナントルート、任意URLを拒否
 - MCPツールは読み取り専用、非破壊、冪等として宣言
 - Cookieやトークンを独自ファイルへエクスポートしない
 - HTTPエラー時のHTML本文を読み取らない
 - ログは標準エラーへ出力し、標準出力はMCPプロトコル専用とする
 
-詳細は[`docs/phase-1-authentication.md`](docs/phase-1-authentication.md)を参照してください。
+詳細は[`docs/phase-1-authentication.md`](docs/phase-1-authentication.md)と
+[`docs/phase-2-sharepoint-read.md`](docs/phase-2-sharepoint-read.md)を参照してください。
