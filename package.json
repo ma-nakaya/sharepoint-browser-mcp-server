@@ -1,6 +1,6 @@
 {
   "name": "sharepoint-browser-mcp-server",
-  "version": "0.6.0",
+  "version": "0.7.0",
   "description": "Read-only SharePoint MCP server using an authenticated Microsoft Edge session without Entra app registration.",
   "type": "module",
   "private": true,
@@ -14,6 +14,10 @@
     "start": "node --env-file-if-exists=.env --enable-source-maps dist/src/index.js",
     "prelogin": "npm run build",
     "login": "node --env-file-if-exists=.env --enable-source-maps dist/src/login.js",
+    "tunnel:init": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/tunnel-client.ps1 -Action Init",
+    "tunnel:doctor": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/tunnel-client.ps1 -Action Doctor",
+    "tunnel:start": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/tunnel-client.ps1 -Action Run",
+    "tunnel:install-task": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/install-tunnel-scheduled-task.ps1",
     "dev": "npm run build && npm start",
     "pretest": "npm run build",
     "test": "node --test --enable-source-maps \"dist/test/**/*.test.js\"",
