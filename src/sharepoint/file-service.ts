@@ -261,6 +261,9 @@ function classifyErrorStatus<T>(
     );
   }
   if (status === 403) {
+    if (allowFallback) {
+      return undefined;
+    }
     throw new SharePointFileError(
       `The signed-in user cannot read the requested SharePoint ${resourceName}.`,
     );

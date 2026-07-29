@@ -144,6 +144,9 @@ function classifyJsonResponse(
   }
 
   if (response.status === 403) {
+    if (allowFallback) {
+      return undefined;
+    }
     throw new SharePointReadError(
       `The signed-in user cannot read the requested SharePoint ${resourceName}.`,
     );

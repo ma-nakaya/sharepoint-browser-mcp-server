@@ -92,15 +92,32 @@ test("uses browser fetch after a primary transport error", async () => {
   assert.equal(transport.fallbackCalls, 1);
 });
 
-test("does not retry a clear access denial", async () => {
+test("uses browser fetch when the primary request has a transient access denial", async () => {
   const transport = new FakeTransport(
     response(403),
-    new Error("fallback must not run"),
+    response(
+      200,
+      JSON.stringify({ Id: 12, Title: "Example User", IsSiteAdmin: false }),
+      "application/json",
+      "browser-fetch",
+    ),
+  );
+  const result = await new AuthStatusService(SITE_URL, transport).getStatus();
+
+  assert.equal(result.state, "AUTHENTICATED");
+  assert.equal(result.method, "browser-fetch");
+  assert.equal(transport.fallbackCalls, 1);
+});
+
+test("reports access denied when both request methods return 403", async () => {
+  const transport = new FakeTransport(
+    response(403),
+    response(403, "", "application/json", "browser-fetch"),
   );
   const result = await new AuthStatusService(SITE_URL, transport).getStatus();
 
   assert.equal(result.state, "ACCESS_DENIED");
-  assert.equal(transport.fallbackCalls, 0);
+  assert.equal(transport.fallbackCalls, 1);
 });
 
 test("maps a browser login redirect to LOGIN_REQUIRED", async () => {
