@@ -23,6 +23,12 @@ export interface SharePointBinaryResponse {
 }
 
 export interface SharePointBinaryTransport extends SharePointTransport {
-  getBinary(apiPath: string): Promise<SharePointBinaryResponse>;
-  getBinaryViaPage(apiPath: string): Promise<SharePointBinaryResponse>;
+  getBinary(
+    apiPath: string,
+    maxBytes?: number,
+  ): Promise<SharePointBinaryResponse>;
+  getBinaryViaPage(
+    apiPath: string,
+    maxBytes?: number,
+  ): Promise<SharePointBinaryResponse>;
 }

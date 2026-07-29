@@ -3,6 +3,10 @@ import test from "node:test";
 
 import type { AppConfig } from "../src/config.js";
 import type { Logger } from "../src/logger.js";
+import {
+  MAX_DOCUMENT_SOURCE_BYTES,
+  MAX_DOWNLOAD_BYTES,
+} from "../src/sharepoint/file-content.js";
 import { PlaywrightSharePointTransport } from "../src/sharepoint/playwright-transport.js";
 
 const CONFIG: AppConfig = {
@@ -100,7 +104,7 @@ test("rejects an oversized binary response before reading its body", async () =>
         status: () => 200,
         headers: () => ({
           "content-type": "application/pdf",
-          "content-length": String(5 * 1_024 * 1_024 + 1),
+          "content-length": String(MAX_DOWNLOAD_BYTES + 1),
         }),
         body: async () => {
           bodyRead = true;
@@ -126,6 +130,68 @@ test("rejects an oversized binary response before reading its body", async () =>
   assert.equal(result.bodyTruncated, true);
   assert.equal(result.body.byteLength, 0);
   assert.equal(bodyRead, false);
+});
+
+test("reads a larger document source when given the internal document limit", async () => {
+  let bodyRead = false;
+  const bytes = Buffer.alloc(MAX_DOWNLOAD_BYTES + 1);
+  const context = {
+    request: {
+      get: async () => ({
+        status: () => 200,
+        headers: () => ({
+          "content-type":
+            "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+          "content-length": String(bytes.byteLength),
+        }),
+        body: async () => {
+          bodyRead = true;
+          return bytes;
+        },
+      }),
+    },
+  };
+  const edgeSession = {
+    getContext: async () => context,
+    close: async () => undefined,
+  };
+  const transport = new PlaywrightSharePointTransport(
+    CONFIG,
+    edgeSession as never,
+    LOGGER,
+  );
+
+  const result = await transport.getBinary(
+    "/_api/web/GetFileByServerRelativePath(decodedUrl='/sites/genai/Documents/a.pptx')/$value",
+    MAX_DOCUMENT_SOURCE_BYTES,
+  );
+
+  assert.equal(result.bodyTruncated, false);
+  assert.equal(result.body.byteLength, bytes.byteLength);
+  assert.equal(bodyRead, true);
+});
+
+test("rejects binary response limits above the document source boundary", async () => {
+  const edgeSession = {
+    getContext: async () => {
+      throw new Error("browser must not start");
+    },
+    close: async () => undefined,
+  };
+  const transport = new PlaywrightSharePointTransport(
+    CONFIG,
+    edgeSession as never,
+    LOGGER,
+  );
+
+  await assert.rejects(
+    () =>
+      transport.getBinary(
+        "/_api/web/GetFileByServerRelativePath(decodedUrl='/sites/genai/Documents/a.pptx')/$value",
+        MAX_DOCUMENT_SOURCE_BYTES + 1,
+      ),
+    /Binary response limit/u,
+  );
 });
 
 function createLoginRedirectContext(closeCounter: { value: number }) {

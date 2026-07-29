@@ -9,6 +9,7 @@ import {
   type DocumentUnitType,
   type SupportedDocumentFormat,
 } from "./document-extractor.js";
+import { MAX_DOCUMENT_SOURCE_BYTES } from "./file-content.js";
 import type { SharePointFileService } from "./file-service.js";
 import type { RequestMethod } from "./http.js";
 
@@ -73,7 +74,10 @@ export class SharePointDocumentService {
   constructor(private readonly fileService: SharePointFileService) {}
 
   async extractText(fileUrl: string): Promise<SharePointDocumentText> {
-    const file = await this.fileService.downloadFile(fileUrl);
+    const file = await this.fileService.downloadFile(
+      fileUrl,
+      MAX_DOCUMENT_SOURCE_BYTES,
+    );
     const extracted = await extractDocumentText(file.data, file.extension);
     return {
       ...getDocumentMetadata(file),
@@ -82,7 +86,10 @@ export class SharePointDocumentService {
   }
 
   async getOutline(fileUrl: string): Promise<SharePointDocumentOutline> {
-    const file = await this.fileService.downloadFile(fileUrl);
+    const file = await this.fileService.downloadFile(
+      fileUrl,
+      MAX_DOCUMENT_SOURCE_BYTES,
+    );
     const outline = await extractDocumentOutline(file.data, file.extension);
     return {
       ...getDocumentMetadata(file),
@@ -95,7 +102,10 @@ export class SharePointDocumentService {
     nodeIds: readonly string[],
     expectedSha256?: string,
   ): Promise<SharePointDocumentNodes> {
-    const file = await this.fileService.downloadFile(fileUrl);
+    const file = await this.fileService.downloadFile(
+      fileUrl,
+      MAX_DOCUMENT_SOURCE_BYTES,
+    );
     assertExpectedDocumentHash(file.sha256, expectedSha256);
     const selected = await extractDocumentNodes(
       file.data,
@@ -114,7 +124,10 @@ export class SharePointDocumentService {
     maxResults?: number,
     expectedSha256?: string,
   ): Promise<SharePointDocumentSearch> {
-    const file = await this.fileService.downloadFile(fileUrl);
+    const file = await this.fileService.downloadFile(
+      fileUrl,
+      MAX_DOCUMENT_SOURCE_BYTES,
+    );
     assertExpectedDocumentHash(file.sha256, expectedSha256);
     const result = await searchDocumentStructure(
       file.data,

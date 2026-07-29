@@ -6,6 +6,7 @@ import {
   buildFileMetadataApiPath,
   buildFolderChildrenApiPaths,
   DEFAULT_FOLDER_RESULTS,
+  MAX_DOCUMENT_SOURCE_BYTES,
   MAX_DOWNLOAD_BYTES,
   normalizeFolderResultLimit,
   normalizeSharePointFileUrl,
@@ -87,7 +88,11 @@ export class SharePointFileService {
     };
   }
 
-  async downloadFile(fileUrl: string): Promise<SharePointDownloadedFile> {
+  async downloadFile(
+    fileUrl: string,
+    maxBytes = MAX_DOWNLOAD_BYTES,
+  ): Promise<SharePointDownloadedFile> {
+    const downloadLimit = normalizeDownloadLimit(maxBytes);
     const file = normalizeSharePointFileUrl(this.siteUrl, fileUrl);
     const metadataResponse = await this.getJson(
       buildFileMetadataApiPath(file.serverRelativeUrl),
@@ -98,15 +103,20 @@ export class SharePointFileService {
       this.siteUrl,
       file,
     );
-    if (metadata.sizeBytes > MAX_DOWNLOAD_BYTES) {
+    if (metadata.sizeBytes > downloadLimit) {
+      const limitType =
+        downloadLimit === MAX_DOWNLOAD_BYTES
+          ? "MCP download"
+          : "document processing";
       throw new SharePointFileError(
-        `File exceeds the ${MAX_DOWNLOAD_BYTES}-byte MCP download limit.`,
+        `File exceeds the ${downloadLimit}-byte ${limitType} limit.`,
       );
     }
 
     const binaryResponse = await this.getBinary(
       buildFileDownloadApiPath(file.serverRelativeUrl),
       "file",
+      downloadLimit,
     );
     if (binaryResponse.body.byteLength !== metadata.sizeBytes) {
       throw new SharePointFileError(
@@ -166,9 +176,10 @@ export class SharePointFileService {
   private async getBinary(
     apiPath: string,
     resourceName: string,
+    maxBytes: number,
   ): Promise<SharePointBinaryResponse> {
     try {
-      const primary = await this.transport.getBinary(apiPath);
+      const primary = await this.transport.getBinary(apiPath, maxBytes);
       const result = classifyBinaryResponse(primary, resourceName, true);
       if (result) {
         return result;
@@ -180,7 +191,10 @@ export class SharePointFileService {
     }
 
     try {
-      const fallback = await this.transport.getBinaryViaPage(apiPath);
+      const fallback = await this.transport.getBinaryViaPage(
+        apiPath,
+        maxBytes,
+      );
       const result = classifyBinaryResponse(fallback, resourceName, false);
       if (result) {
         return result;
@@ -198,6 +212,19 @@ export class SharePointFileService {
 }
 
 class SharePointFileError extends Error {}
+
+function normalizeDownloadLimit(value: number): number {
+  if (
+    !Number.isSafeInteger(value) ||
+    value < 1 ||
+    value > MAX_DOCUMENT_SOURCE_BYTES
+  ) {
+    throw new SharePointFileError(
+      `File processing limit must be between 1 and ${MAX_DOCUMENT_SOURCE_BYTES} bytes.`,
+    );
+  }
+  return value;
+}
 
 function classifyJsonResponse(
   response: SharePointResponse,

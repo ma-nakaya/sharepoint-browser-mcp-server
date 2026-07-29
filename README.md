@@ -2,7 +2,7 @@
 
 Entra IDアプリ登録を使用せず、Microsoft Edgeの認証済みセッションからSharePoint Onlineへ読み取り専用で接続するオンプレMCPサーバーです。
 
-Phase 1の認証状態確認、Phase 2の検索・ページ本文取得、Phase 3のファイルアクセス、Phase 4のPDF・Office文書本文抽出、Phase 5のSharePointサイト横断検索、Phase 6の文書構造検索、Phase 7のChatGPT接続に加え、Phase 8ではSharePointリスト項目の本文取得に対応します。
+Phase 1の認証状態確認、Phase 2の検索・ページ本文取得、Phase 3のファイルアクセス、Phase 4のPDF・Office文書本文抽出、Phase 5のSharePointサイト横断検索、Phase 6の文書構造検索、Phase 7のChatGPT接続、Phase 8のSharePointリスト項目取得に加え、Phase 9では最大20 MiBの文書解析に対応します。
 
 ## 目的
 
@@ -208,6 +208,7 @@ SharePoint自身の検索インデックスを使い、設定済みサイト配�
 
 設定済みサイトのPDF・DOCX・XLSX・PPTXを取得し、プレーンテキストとして返します。
 
+- 解析元ファイルは最大20 MiB
 - 抽出本文は最大100,000文字
 - PDFは最大200ページ
 - DOCXは本文、ヘッダー、フッター、脚注、文末脚注を抽出
@@ -249,7 +250,8 @@ PDF・DOCX・XLSX・PPTXを共通ノードへ変換し、短いプレビュー�
 - 検索結果URLを再検証し、設定サイト外の結果を除外
 - 検索対象フォルダー、拡張子、更新日の入力を検証し、検索結果の親URLもサイト境界と照合
 - フォルダー・ファイルURLとSharePoint応答パスを再検証
-- バイナリは許可形式と5 MiB上限を満たす場合だけ返却
+- MCP resourceとして返すバイナリは許可形式と5 MiB上限を満たす場合だけ返却
+- PDF・Office文書の解析元ファイルは20 MiBまで許可し、元バイナリ自体はMCP応答へ含めない
 - Office ZIPは展開前後のサイズと部品数を制限し、DOCTYPE・ENTITYを拒否
 - 抽出本文を100,000文字に制限
 - 構造化ノードは最大500件、選択ノードは最大20件
@@ -267,4 +269,5 @@ PDF・DOCX・XLSX・PPTXを共通ノードへ変換し、短いプレビュー�
 [`docs/phase-5-site-search.md`](docs/phase-5-site-search.md)、
 [`docs/phase-6-document-structure.md`](docs/phase-6-document-structure.md)、
 [`docs/phase-7-chatgpt-connection.md`](docs/phase-7-chatgpt-connection.md)、
-[`docs/phase-8-list-item-fetch.md`](docs/phase-8-list-item-fetch.md)を参照してください。
+[`docs/phase-8-list-item-fetch.md`](docs/phase-8-list-item-fetch.md)、
+[`docs/phase-9-large-document-processing.md`](docs/phase-9-large-document-processing.md)を参照してください。
