@@ -8,6 +8,7 @@ import {
   MAX_DOCUMENT_SEARCH_RESULTS,
   MAX_EXTRACTED_TEXT_CHARACTERS,
 } from "../sharepoint/document-extractor.js";
+import { MAX_DOCUMENT_SOURCE_BYTES } from "../sharepoint/file-content.js";
 import type { SharePointDocumentService } from "../sharepoint/document-service.js";
 
 const fileUrlSchema = z
@@ -67,6 +68,7 @@ export function registerDocumentTool(
       title: "Extract text from a SharePoint document",
       description: [
         "Downloads and extracts plain text from a PDF, DOCX, XLSX, or PPTX file under the configured SharePoint site.",
+        `Document source files are limited to ${MAX_DOCUMENT_SOURCE_BYTES} bytes.`,
         `Extracted text is limited to ${MAX_EXTRACTED_TEXT_CHARACTERS} characters.`,
         "Document actions are not executed, Office archives are expanded with strict limits, and no file is saved locally.",
       ].join(" "),
@@ -104,6 +106,7 @@ export function registerDocumentTool(
       title: "Get a structured SharePoint document outline",
       description: [
         "Builds a lightweight, deterministic outline for a PDF, DOCX, XLSX, or PPTX file.",
+        `Document source files are limited to ${MAX_DOCUMENT_SOURCE_BYTES} bytes.`,
         "PDF pages, Word heading sections, Excel sheets, and PowerPoint slides receive stable node IDs and source locators.",
         "Returns short previews only; use sharepoint_get_document_nodes for selected full text.",
         "No external LLM is called and no index is saved locally.",
@@ -142,6 +145,7 @@ export function registerDocumentTool(
       title: "Search inside a structured SharePoint document",
       description: [
         "Searches page, heading-section, sheet, or slide nodes inside one SharePoint document.",
+        `Document source files are limited to ${MAX_DOCUMENT_SOURCE_BYTES} bytes.`,
         "Returns ranked node IDs, exact source locators, and compact snippets.",
         "Use sharepoint_get_document_nodes with selected node IDs to fetch focused text.",
         "Search is deterministic and local to the MCP process; no external LLM or persistent index is used.",
@@ -209,6 +213,7 @@ export function registerDocumentTool(
       title: "Get selected SharePoint document nodes",
       description: [
         "Returns text only for selected server-generated document node IDs.",
+        `Document source files are limited to ${MAX_DOCUMENT_SOURCE_BYTES} bytes.`,
         `Accepts up to ${MAX_DOCUMENT_NODE_IDS} nodes and limits combined text to ${MAX_EXTRACTED_TEXT_CHARACTERS} characters.`,
         "Call sharepoint_get_document_outline or sharepoint_search_document first to obtain valid node IDs.",
       ].join(" "),

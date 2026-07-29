@@ -4,6 +4,7 @@ import { encodeResourcePathArgument } from "./resource-path.js";
 export const DEFAULT_FOLDER_RESULTS = 50;
 export const MAX_FOLDER_RESULTS = 100;
 export const MAX_DOWNLOAD_BYTES = 5 * 1_024 * 1_024;
+export const MAX_DOCUMENT_SOURCE_BYTES = 20 * 1_024 * 1_024;
 
 const DOWNLOAD_MIME_TYPES = new Map<string, string>([
   [".bmp", "image/bmp"],

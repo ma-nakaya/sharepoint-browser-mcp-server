@@ -3,6 +3,10 @@ import type { APIResponse, Page } from "playwright-core";
 import type { AppConfig } from "../config.js";
 import type { Logger } from "../logger.js";
 import type { EdgeSession } from "../browser/edge-session.js";
+import {
+  MAX_DOCUMENT_SOURCE_BYTES,
+  MAX_DOWNLOAD_BYTES,
+} from "./file-content.js";
 import type {
   SharePointBinaryResponse,
   SharePointBinaryTransport,
@@ -12,7 +16,6 @@ import { buildSharePointApiUrl } from "./url-guard.js";
 
 const ACCEPT_JSON = "application/json;odata=nometadata";
 const MAX_RESPONSE_CHARACTERS = 1_048_576;
-const MAX_BINARY_RESPONSE_BYTES = 5 * 1_024 * 1_024;
 
 export class PlaywrightSharePointTransport implements SharePointBinaryTransport {
   constructor(
@@ -117,7 +120,11 @@ export class PlaywrightSharePointTransport implements SharePointBinaryTransport 
     }
   }
 
-  async getBinary(apiPath: string): Promise<SharePointBinaryResponse> {
+  async getBinary(
+    apiPath: string,
+    maxBytes = MAX_DOWNLOAD_BYTES,
+  ): Promise<SharePointBinaryResponse> {
+    const responseLimit = normalizeBinaryResponseLimit(maxBytes);
     const target = buildSharePointApiUrl(this.config.siteUrl, apiPath);
     const context = await this.edgeSession.getContext();
     const response = await context.request.get(target.toString(), {
@@ -140,7 +147,7 @@ export class PlaywrightSharePointTransport implements SharePointBinaryTransport 
         method: "api-request",
       };
     }
-    if (declaredLength !== undefined && declaredLength > MAX_BINARY_RESPONSE_BYTES) {
+    if (declaredLength !== undefined && declaredLength > responseLimit) {
       return {
         status,
         contentType,
@@ -151,7 +158,7 @@ export class PlaywrightSharePointTransport implements SharePointBinaryTransport 
     }
 
     const responseBody = await response.body();
-    const bodyTruncated = responseBody.byteLength > MAX_BINARY_RESPONSE_BYTES;
+    const bodyTruncated = responseBody.byteLength > responseLimit;
     return {
       status,
       contentType,
@@ -161,7 +168,11 @@ export class PlaywrightSharePointTransport implements SharePointBinaryTransport 
     };
   }
 
-  async getBinaryViaPage(apiPath: string): Promise<SharePointBinaryResponse> {
+  async getBinaryViaPage(
+    apiPath: string,
+    maxBytes = MAX_DOWNLOAD_BYTES,
+  ): Promise<SharePointBinaryResponse> {
+    const responseLimit = normalizeBinaryResponseLimit(maxBytes);
     const target = buildSharePointApiUrl(this.config.siteUrl, apiPath);
     const context = await this.edgeSession.getContext();
     const page = await context.newPage();
@@ -257,7 +268,7 @@ export class PlaywrightSharePointTransport implements SharePointBinaryTransport 
           targetUrl: target.toString(),
           expectedOrigin: this.config.siteOrigin,
           timeoutMs: this.config.requestTimeoutMs,
-          maxResponseBytes: MAX_BINARY_RESPONSE_BYTES,
+          maxResponseBytes: responseLimit,
         },
       );
 
@@ -323,4 +334,17 @@ function parseContentLength(value: string | undefined): number | undefined {
   }
   const parsed = Number(value);
   return Number.isSafeInteger(parsed) && parsed >= 0 ? parsed : undefined;
+}
+
+function normalizeBinaryResponseLimit(value: number): number {
+  if (
+    !Number.isSafeInteger(value) ||
+    value < 1 ||
+    value > MAX_DOCUMENT_SOURCE_BYTES
+  ) {
+    throw new Error(
+      `Binary response limit must be between 1 and ${MAX_DOCUMENT_SOURCE_BYTES} bytes.`,
+    );
+  }
+  return value;
 }

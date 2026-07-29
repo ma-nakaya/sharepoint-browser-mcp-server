@@ -4,6 +4,7 @@ import test from "node:test";
 import { strToU8, zipSync } from "fflate";
 
 import { SharePointDocumentService } from "../src/sharepoint/document-service.js";
+import { MAX_DOCUMENT_SOURCE_BYTES } from "../src/sharepoint/file-content.js";
 import type { SharePointFileService } from "../src/sharepoint/file-service.js";
 
 test("combines SharePoint file metadata with extracted text", async () => {
@@ -12,19 +13,23 @@ test("combines SharePoint file metadata with extracted text", async () => {
       '<w:document xmlns:w="urn:w"><w:body><w:p><w:t>Policy text</w:t></w:p></w:body></w:document>',
     ),
   });
+  let requestedLimit: number | undefined;
   const fileService = {
-    downloadFile: async () => ({
-      name: "Policy.docx",
-      url: "https://example.sharepoint.com/sites/genai/Documents/Policy.docx",
-      serverRelativeUrl: "/sites/genai/Documents/Policy.docx",
-      extension: ".docx",
-      sizeBytes: data.byteLength,
-      mimeType:
-        "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-      sha256: "a".repeat(64),
-      method: "api-request" as const,
-      data,
-    }),
+    downloadFile: async (_fileUrl: string, maxBytes?: number) => {
+      requestedLimit = maxBytes;
+      return {
+        name: "Policy.docx",
+        url: "https://example.sharepoint.com/sites/genai/Documents/Policy.docx",
+        serverRelativeUrl: "/sites/genai/Documents/Policy.docx",
+        extension: ".docx",
+        sizeBytes: data.byteLength,
+        mimeType:
+          "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        sha256: "a".repeat(64),
+        method: "api-request" as const,
+        data,
+      };
+    },
   };
   const service = new SharePointDocumentService(
     fileService as unknown as SharePointFileService,
@@ -38,6 +43,7 @@ test("combines SharePoint file metadata with extracted text", async () => {
   assert.equal(result.format, "docx");
   assert.match(result.text, /Policy text/u);
   assert.equal(result.characters, result.text.length);
+  assert.equal(requestedLimit, MAX_DOCUMENT_SOURCE_BYTES);
 });
 
 test("combines file identity with outline, search, and selected nodes", async () => {

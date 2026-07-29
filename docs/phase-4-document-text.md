@@ -56,7 +56,8 @@ Open XML ZIPから次のXMLだけを抽出する。
 
 ## ZIP展開のセキュリティ境界
 
-- 圧縮済みファイル自体はPhase 3の5 MiB上限を適用
+- MCP resourceとして直接返す場合はPhase 3の5 MiB上限を適用
+- 文書解析だけに使うPDF・Officeファイルは20 MiBまで許可し、元バイナリはMCP応答へ含めない
 - 最大1,000 ZIPエントリ
 - 対象XML 1部品あたり最大2 MiB
 - 対象XMLの展開後合計は最大8 MiB

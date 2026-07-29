@@ -1,7 +1,10 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { MAX_DOWNLOAD_BYTES } from "../src/sharepoint/file-content.js";
+import {
+  MAX_DOCUMENT_SOURCE_BYTES,
+  MAX_DOWNLOAD_BYTES,
+} from "../src/sharepoint/file-content.js";
 import { SharePointFileService } from "../src/sharepoint/file-service.js";
 import type {
   SharePointBinaryResponse,
@@ -19,6 +22,8 @@ class FakeBinaryTransport implements SharePointBinaryTransport {
   public fallbackJsonCalls = 0;
   public primaryBinaryCalls = 0;
   public fallbackBinaryCalls = 0;
+  public primaryBinaryLimits: Array<number | undefined> = [];
+  public fallbackBinaryLimits: Array<number | undefined> = [];
 
   constructor(
     private readonly primaryJson: JsonHandler,
@@ -36,13 +41,21 @@ class FakeBinaryTransport implements SharePointBinaryTransport {
     return resolve(this.fallbackJson(apiPath));
   }
 
-  async getBinary(apiPath: string): Promise<SharePointBinaryResponse> {
+  async getBinary(
+    apiPath: string,
+    maxBytes?: number,
+  ): Promise<SharePointBinaryResponse> {
     this.primaryBinaryCalls += 1;
+    this.primaryBinaryLimits.push(maxBytes);
     return resolve(this.primaryBinary(apiPath));
   }
 
-  async getBinaryViaPage(apiPath: string): Promise<SharePointBinaryResponse> {
+  async getBinaryViaPage(
+    apiPath: string,
+    maxBytes?: number,
+  ): Promise<SharePointBinaryResponse> {
     this.fallbackBinaryCalls += 1;
+    this.fallbackBinaryLimits.push(maxBytes);
     return resolve(this.fallbackBinary(apiPath));
   }
 
@@ -288,6 +301,28 @@ test("rejects oversized metadata before downloading bytes", async () => {
 
   await assert.rejects(() => service.downloadFile(FILE_URL), /download limit/u);
   assert.equal(transport.primaryBinaryCalls, 0);
+});
+
+test("allows a larger source only for internal document processing", async () => {
+  const bytes = new Uint8Array(MAX_DOWNLOAD_BYTES + 1);
+  const transport = new FakeBinaryTransport(
+    () => jsonResponse(fileMetadata(bytes.byteLength)),
+    () => new Error("fallback must not run"),
+    () => binaryResponse(bytes),
+    () => new Error("binary fallback must not run"),
+  );
+  const service = new SharePointFileService(SITE_URL, transport);
+
+  const result = await service.downloadFile(
+    FILE_URL,
+    MAX_DOCUMENT_SOURCE_BYTES,
+  );
+
+  assert.equal(result.sizeBytes, bytes.byteLength);
+  assert.deepEqual(
+    transport.primaryBinaryLimits,
+    [MAX_DOCUMENT_SOURCE_BYTES],
+  );
 });
 
 test("rejects binary data whose size differs from metadata", async () => {
