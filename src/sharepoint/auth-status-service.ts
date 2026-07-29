@@ -108,6 +108,9 @@ export class AuthStatusService {
     }
 
     if (response.status === 403) {
+      if (allowFallback) {
+        return { kind: "fallback" };
+      }
       return {
         kind: "final",
         result: {

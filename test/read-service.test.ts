@@ -115,6 +115,38 @@ test("uses browser fetch for a non-JSON primary response", async () => {
   assert.equal(transport.fallbackCalls, 1);
 });
 
+test("uses browser fetch when the primary search request returns 403", async () => {
+  const transport = new FakeTransport(
+    response(403),
+    response(
+      200,
+      emptySearchBody(),
+      "application/json",
+      "browser-fetch",
+    ),
+  );
+  const service = new SharePointReadService(SITE_URL, transport);
+
+  const result = await service.search("policy");
+
+  assert.equal(result.method, "browser-fetch");
+  assert.equal(transport.fallbackCalls, 1);
+});
+
+test("reports access denied when both search request methods return 403", async () => {
+  const transport = new FakeTransport(
+    response(403),
+    response(403, "", "application/json", "browser-fetch"),
+  );
+  const service = new SharePointReadService(SITE_URL, transport);
+
+  await assert.rejects(
+    () => service.search("policy"),
+    /cannot read the requested SharePoint search/u,
+  );
+  assert.equal(transport.fallbackCalls, 1);
+});
+
 test("does not retry a clear page not-found response", async () => {
   const transport = new FakeTransport(
     response(404),

@@ -62,6 +62,19 @@ function jsonResponse(
   };
 }
 
+function jsonStatusResponse(
+  status: number,
+  method: "api-request" | "browser-fetch" = "api-request",
+): SharePointResponse {
+  return {
+    status,
+    contentType: "application/json;odata=nometadata",
+    body: "",
+    bodyTruncated: false,
+    method,
+  };
+}
+
 function binaryResponse(
   body: Uint8Array,
   contentType = "application/octet-stream",
@@ -71,6 +84,19 @@ function binaryResponse(
     status: 200,
     contentType,
     body,
+    bodyTruncated: false,
+    method,
+  };
+}
+
+function binaryStatusResponse(
+  status: number,
+  method: "api-request" | "browser-fetch" = "api-request",
+): SharePointBinaryResponse {
+  return {
+    status,
+    contentType: "application/octet-stream",
+    body: new Uint8Array(),
     bodyTruncated: false,
     method,
   };
@@ -112,6 +138,49 @@ test("lists document libraries from the primary request", async () => {
   assert.equal(result.returnedLibraries, 1);
   assert.equal(result.libraries[0]?.title, "Documents");
   assert.equal(transport.fallbackJsonCalls, 0);
+});
+
+test("lists document libraries through browser fetch after a primary 403", async () => {
+  const librariesBody = JSON.stringify({
+    value: [
+      {
+        Title: "Documents",
+        ItemCount: 2,
+        RootFolder: {
+          ServerRelativeUrl: "/sites/genai/Shared Documents",
+        },
+      },
+    ],
+  });
+  const transport = new FakeBinaryTransport(
+    () => jsonStatusResponse(403),
+    () => jsonResponse(librariesBody, "browser-fetch"),
+    () => new Error("binary must not run"),
+    () => new Error("binary fallback must not run"),
+  );
+  const service = new SharePointFileService(SITE_URL, transport);
+
+  const result = await service.listDocumentLibraries();
+
+  assert.equal(result.returnedLibraries, 1);
+  assert.equal(result.method, "browser-fetch");
+  assert.equal(transport.fallbackJsonCalls, 1);
+});
+
+test("reports access denied when both library request methods return 403", async () => {
+  const transport = new FakeBinaryTransport(
+    () => jsonStatusResponse(403),
+    () => jsonStatusResponse(403, "browser-fetch"),
+    () => new Error("binary must not run"),
+    () => new Error("binary fallback must not run"),
+  );
+  const service = new SharePointFileService(SITE_URL, transport);
+
+  await assert.rejects(
+    () => service.listDocumentLibraries(),
+    /cannot read the requested SharePoint document libraries/u,
+  );
+  assert.equal(transport.fallbackJsonCalls, 1);
 });
 
 test("lists direct folder children", async () => {
@@ -182,6 +251,22 @@ test("uses browser fetch when the primary binary response is HTML", async () => 
     () => jsonResponse(fileMetadata(bytes.byteLength)),
     () => new Error("JSON fallback must not run"),
     () => binaryResponse(new TextEncoder().encode("<html>"), "text/html"),
+    () => binaryResponse(bytes, "text/plain", "browser-fetch"),
+  );
+  const service = new SharePointFileService(SITE_URL, transport);
+
+  const result = await service.downloadFile(FILE_URL);
+
+  assert.equal(result.method, "browser-fetch");
+  assert.equal(transport.fallbackBinaryCalls, 1);
+});
+
+test("uses browser fetch when the primary binary request returns 403", async () => {
+  const bytes = new TextEncoder().encode("hello");
+  const transport = new FakeBinaryTransport(
+    () => jsonResponse(fileMetadata(bytes.byteLength)),
+    () => new Error("JSON fallback must not run"),
+    () => binaryStatusResponse(403),
     () => binaryResponse(bytes, "text/plain", "browser-fetch"),
   );
   const service = new SharePointFileService(SITE_URL, transport);
