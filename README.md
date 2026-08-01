@@ -2,13 +2,13 @@
 
 Entra IDアプリ登録を使用せず、Microsoft Edgeの認証済みセッションからSharePoint Onlineへ読み取り専用で接続するオンプレMCPサーバーです。
 
-Phase 1の認証状態確認、Phase 2の検索・ページ本文取得、Phase 3のファイルアクセス、Phase 4のPDF・Office文書本文抽出、Phase 5のSharePointサイト横断検索、Phase 6の文書構造検索、Phase 7のChatGPT接続、Phase 8のSharePointリスト項目取得に加え、Phase 9では最大20 MiBの文書解析に対応します。
+Phase 1の認証状態確認、Phase 2の検索・ページ本文取得、Phase 3のファイルアクセス、Phase 4のPDF・Office文書本文抽出、Phase 5のSharePointサイト横断検索、Phase 6の文書構造検索、Phase 7のChatGPT接続、Phase 8のSharePointリスト項目取得、Phase 9の最大20 MiB文書解析に加え、Phase 10では複数サイトの横断検索・取得に対応します。
 
 ## 目的
 
 - Entra IDのアプリ登録、Client ID、Client Secret、証明書を使わない
 - 利用者が通常どおりEdgeで完了したSSO・MFAセッションを再利用する
-- 設定済みSharePointサイト以外へアクセスしない
+- 設定済みSharePointサイト群以外へアクセスしない
 - SharePoint REST APIを読み取り専用で利用する
 - Cookie、トークン、Authorizationヘッダーをアプリケーションへ取り出さない
 
@@ -20,7 +20,7 @@ Phase 1の認証状態確認、Phase 2の検索・ページ本文取得、Phase 
 - 初回・再認証用のheadedログインコマンド
 - `sharepoint_auth_status` MCPツール
 - `/_api/web/currentuser`による認証確認
-- `sharepoint_search`による設定済みサイト内の横断検索、種類・フォルダー・拡張子・更新日による絞り込み
+- `sharepoint_search`による設定済みサイト群の横断検索、種類・フォルダー・拡張子・更新日による絞り込み
 - `sharepoint_get_page`による`SitePages`内の`.aspx`ページ本文取得
 - `sharepoint_list_document_libraries`による可視ドキュメントライブラリ一覧
 - `sharepoint_list_folder`による直下フォルダー・ファイル一覧
@@ -62,12 +62,13 @@ Copy-Item .env.example .env
 
 ```dotenv
 SHAREPOINT_SITE_URL=https://tenant.sharepoint.com/sites/example
+SHAREPOINT_ADDITIONAL_SITE_URLS=https://tenant.sharepoint.com/teams/another-site
 SHAREPOINT_PROFILE_DIR=C:\Apps\SharePointBrowserMcp\edge-profile
 SHAREPOINT_HEADLESS=true
 LOG_LEVEL=info
 ```
 
-`SHAREPOINT_SITE_URL`は、SharePoint Onlineの`/sites/<name>`または`/teams/<name>`を指定してください。テナントルート、OneDrive、任意のURLは受け付けません。
+`SHAREPOINT_SITE_URL`は主サイト、`SHAREPOINT_ADDITIONAL_SITE_URLS`は追加サイトをカンマ・セミコロン・改行区切りで指定します。いずれも同じSharePoint Onlineテナントの`/sites/<name>`または`/teams/<name>`である必要があります。テナントルート、OneDrive、任意のURLは受け付けません。
 `npm run login`、`npm run dev`、`npm start`は、プロジェクト直下に`.env`があれば自動的に読み込みます。
 
 ## 初回ログイン・再認証
@@ -120,6 +121,7 @@ stdioクライアントの設定例:
       ],
       "env": {
         "SHAREPOINT_SITE_URL": "https://tenant.sharepoint.com/sites/example",
+        "SHAREPOINT_ADDITIONAL_SITE_URLS": "https://tenant.sharepoint.com/teams/another-site",
         "SHAREPOINT_PROFILE_DIR": "C:\\Apps\\SharePointBrowserMcp\\edge-profile",
         "SHAREPOINT_HEADLESS": "true"
       }
@@ -132,7 +134,7 @@ stdioクライアントの設定例:
 
 ### `search` / `fetch`
 
-ChatGPTの会社知識・Deep Research互換ツールです。`search`は設定済みSharePointサイトから引用可能なページ、リスト項目、対応文書を検索し、`fetch`は返されたIDの本文と引用URLを取得します。
+ChatGPTの会社知識・Deep Research互換ツールです。`search`は設定済みSharePointサイト群から引用可能なページ、リスト項目、対応文書を横断検索し、`fetch`は返されたIDから対象サイトを選び、本文と引用URLを取得します。
 
 - `search`入力: `query`
 - `search`出力: `id`、`title`、絶対`url`を持つ最大10件の`results`
@@ -145,7 +147,7 @@ ChatGPTとの接続方法は[`docs/phase-7-chatgpt-connection.md`](docs/phase-7-
 
 ### `sharepoint_auth_status`
 
-設定済みサイトに対する現在のEdgeセッション状態を確認します。
+設定済み全サイトに対する現在のEdgeセッション状態を確認します。全サイトが読める場合だけ全体状態を`AUTHENTICATED`とし、サイト別状態も返します。
 
 返却する状態:
 
@@ -161,20 +163,22 @@ MCP結果には、表示名とサイトURLだけを含めます。メールア�
 
 ### `sharepoint_search`
 
-SharePoint自身の検索インデックスを使い、設定済みサイト配下のページとファイルを横断検索します。
+SharePoint自身の検索インデックスを使い、設定済み全サイト配下のページとファイルを横断検索します。
 
 - 必須入力: `query`
+- サイト限定: 任意の`siteUrl`。省略時は全設定サイトを検索
 - 件数・ページング: `maxResults`（1〜20、既定値10）、`startRow`（0〜50,000）
 - 対象限定: `scope`（`all`、`pages`、`documents`）、任意の`folderUrl`
 - 絞り込み: `fileExtensions`（最大10種類）、`modifiedAfter`、`modifiedBefore`
 - 並び順: `relevance`または`modified-desc`
 - 出力: タイトル、URL、結果種別、親URL、ファイル拡張子、コンテンツ種別、更新日時、短い要約、ページング情報
-- 検索APIの結果に設定サイト外のURLが含まれても、MCP結果から除外
+- 複数サイト検索のページングでは`siteUrl`または`folderUrl`で1サイトに限定
+- 検索APIの結果に設定サイト群外のURLが含まれても、MCP結果から除外
 - `kind=page`のURLは`sharepoint_get_page`、対応する`kind=document`のURLは`sharepoint_extract_document_text`へ渡せる
 
 ### `sharepoint_get_page`
 
-設定済みサイトの`SitePages`ライブラリにある`.aspx`ページから、作成済み本文をプレーンテキストで取得します。
+設定済みサイト群の`SitePages`ライブラリにある`.aspx`ページから、作成済み本文をプレーンテキストで取得します。
 
 - 入力: 絶対URLまたはサーバー相対URL
 - 出力: タイトル、URL、更新日時、本文、切り詰め有無
@@ -184,7 +188,7 @@ SharePoint自身の検索インデックスを使い、設定済みサイト配�
 
 ### `sharepoint_list_document_libraries`
 
-設定済みサイト内の非表示ではないドキュメントライブラリと、そのルートフォルダーURLを返します。
+設定済み全サイト内の非表示ではないドキュメントライブラリと、そのルートフォルダーURLを返します。任意の`siteUrl`で1サイトに限定できます。
 
 ### `sharepoint_list_folder`
 
@@ -192,11 +196,11 @@ SharePoint自身の検索インデックスを使い、設定済みサイト配�
 
 - 入力: 絶対URLまたはサーバー相対URL、任意の`maxResults`（1〜100、既定値50）
 - 出力: 名前、URL、サイズ、更新日時、バージョン、ダウンロード可否
-- 設定サイト外や直接の子ではない応答項目を除外
+- 設定サイト群外や直接の子ではない応答項目を除外
 
 ### `sharepoint_download_file`
 
-設定済みサイト内の許可形式ファイルをMCPの埋め込みバイナリresourceとして返します。
+設定済みサイト群内の許可形式ファイルをMCPの埋め込みバイナリresourceとして返します。
 
 - 最大5 MiB
 - 対応形式: PDF、DOCX、XLSX、PPTX、TXT、Markdown、CSV、JSON、XML、BMP、GIF、JPEG、PNG、WebP
@@ -206,7 +210,7 @@ SharePoint自身の検索インデックスを使い、設定済みサイト配�
 
 ### `sharepoint_extract_document_text`
 
-設定済みサイトのPDF・DOCX・XLSX・PPTXを取得し、プレーンテキストとして返します。
+設定済みサイト群のPDF・DOCX・XLSX・PPTXを取得し、プレーンテキストとして返します。
 
 - 解析元ファイルは最大20 MiB
 - 抽出本文は最大100,000文字
@@ -243,11 +247,11 @@ PDF・DOCX・XLSX・PPTXを共通ノードへ変換し、短いプレビュー�
 
 ## セキュリティ境界
 
-- 対象は設定済みSharePoint Onlineサイトのみ
+- 対象は設定済みSharePoint Onlineサイト群のみ（最大10サイト、同一テナント）
 - REST要求は対象サイト配下の`/_api/`のみ
-- ページ取得は設定サイトの`SitePages`配下にある`.aspx`だけを許可
-- リスト項目取得は設定サイトの`Lists/<リスト名>/DispForm.aspx`と単一の正の整数`ID`だけを許可
-- 検索結果URLを再検証し、設定サイト外の結果を除外
+- ページ取得は各設定サイトの`SitePages`配下にある`.aspx`だけを許可
+- リスト項目取得は各設定サイトの`Lists/<リスト名>/DispForm.aspx`と単一の正の整数`ID`だけを許可
+- 検索結果URLを再検証し、設定サイト群外の結果を除外
 - 検索対象フォルダー、拡張子、更新日の入力を検証し、検索結果の親URLもサイト境界と照合
 - フォルダー・ファイルURLとSharePoint応答パスを再検証
 - MCP resourceとして返すバイナリは許可形式と5 MiB上限を満たす場合だけ返却
@@ -270,4 +274,5 @@ PDF・DOCX・XLSX・PPTXを共通ノードへ変換し、短いプレビュー�
 [`docs/phase-6-document-structure.md`](docs/phase-6-document-structure.md)、
 [`docs/phase-7-chatgpt-connection.md`](docs/phase-7-chatgpt-connection.md)、
 [`docs/phase-8-list-item-fetch.md`](docs/phase-8-list-item-fetch.md)、
-[`docs/phase-9-large-document-processing.md`](docs/phase-9-large-document-processing.md)を参照してください。
+[`docs/phase-9-large-document-processing.md`](docs/phase-9-large-document-processing.md)、
+[`docs/phase-10-multi-site.md`](docs/phase-10-multi-site.md)を参照してください。

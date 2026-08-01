@@ -25,7 +25,7 @@
 - `Lists/<リスト名>/DispForm.aspx?ID=...`はリスト項目の表示用フィールドを取得
 - PDF、DOCX、XLSX、PPTXは既存の安全な文書抽出処理を使用
 - `id`、`title`、`text`、`url`、`metadata`を返却
-- 設定済みサイト外のURLと未対応形式は既存のURL境界で拒否
+- 設定済みサイト群外のURLと未対応形式は既存のURL境界で拒否
 
 両ツールは`structuredContent`と同値のJSONテキストを返し、読み取り専用・非破壊・冪等として宣言します。
 

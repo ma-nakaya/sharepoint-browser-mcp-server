@@ -6,6 +6,7 @@ import {
   assertSafeProfileDirectory,
   loadConfig,
   normalizeSharePointSiteUrl,
+  normalizeSharePointSiteUrls,
 } from "../src/config.js";
 
 test("normalizes a site collection URL", () => {
@@ -46,7 +47,37 @@ test("loads secure defaults", () => {
   assert.equal(config.browserChannel, "msedge");
   assert.equal(config.headless, true);
   assert.equal(config.requestTimeoutMs, 15_000);
+  assert.deepEqual(config.siteUrls, [
+    "https://example.sharepoint.com/sites/genai",
+  ]);
   assert.match(config.profileDir, /sharepoint-browser-mcp-server/u);
+});
+
+test("loads additional SharePoint sites from the same tenant", () => {
+  const config = loadConfig({
+    SHAREPOINT_SITE_URL: "https://example.sharepoint.com/teams/ymsl",
+    SHAREPOINT_ADDITIONAL_SITE_URLS: [
+      "https://example.sharepoint.com/teams/ymsl_softeng",
+      "https://example.sharepoint.com/teams/ymsl",
+    ].join(","),
+    LOCALAPPDATA: path.join(path.sep, "tmp", "localappdata"),
+  });
+
+  assert.deepEqual(config.siteUrls, [
+    "https://example.sharepoint.com/teams/ymsl",
+    "https://example.sharepoint.com/teams/ymsl_softeng",
+  ]);
+});
+
+test("rejects additional sites from another tenant", () => {
+  assert.throws(
+    () =>
+      normalizeSharePointSiteUrls(
+        "https://example.sharepoint.com/teams/ymsl",
+        "https://other.sharepoint.com/teams/softeng",
+      ),
+    /same SharePoint tenant/u,
+  );
 });
 
 test("login mode forces a headed browser", () => {
