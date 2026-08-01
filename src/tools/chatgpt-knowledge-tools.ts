@@ -25,7 +25,7 @@ export function registerChatGptKnowledgeTools(
     {
       title: "Search SharePoint knowledge",
       description: [
-        "Use this first when the user wants to find knowledge in the configured SharePoint site.",
+        "Use this first when the user wants to find knowledge across the configured SharePoint sites.",
         "For policies and regulations, search the exact title before trying document-only searches; current content may be a SharePoint list item rather than a file.",
         "Returns stable IDs, titles, and canonical URLs for citation.",
         "Call fetch with a returned ID to retrieve the full text.",

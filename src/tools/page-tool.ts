@@ -5,14 +5,14 @@ import type { SharePointReadService } from "../sharepoint/read-service.js";
 
 export function registerPageTool(
   server: McpServer,
-  service: SharePointReadService,
+  service: Pick<SharePointReadService, "getPage">,
 ): void {
   server.registerTool(
     "sharepoint_get_page",
     {
       title: "Read a SharePoint page",
       description: [
-        "Reads authored text from an .aspx page in the configured site's SitePages library.",
+        "Reads authored text from an .aspx page in a configured site's SitePages library.",
         "Accepts an absolute SharePoint URL or a server-relative URL.",
         "Returns plain text only; raw CanvasContent1 markup and web-part configuration are not exposed.",
       ].join(" "),
@@ -23,7 +23,7 @@ export function registerPageTool(
           .min(1)
           .max(2_048)
           .describe(
-            "Absolute or server-relative URL of an .aspx page under the configured SitePages library.",
+            "Absolute or server-relative URL of an .aspx page under a configured SitePages library.",
           ),
       },
       outputSchema: {

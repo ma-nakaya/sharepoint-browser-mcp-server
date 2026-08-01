@@ -71,7 +71,9 @@ export interface SharePointDocumentSearch extends SharePointDocumentMetadata {
 }
 
 export class SharePointDocumentService {
-  constructor(private readonly fileService: SharePointFileService) {}
+  constructor(
+    private readonly fileService: Pick<SharePointFileService, "downloadFile">,
+  ) {}
 
   async extractText(fileUrl: string): Promise<SharePointDocumentText> {
     const file = await this.fileService.downloadFile(

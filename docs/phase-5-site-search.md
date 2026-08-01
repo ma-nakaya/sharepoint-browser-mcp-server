@@ -22,6 +22,7 @@ SharePoint検索インデックス
 
 | 入力 | 内容 |
 | --- | --- |
+| `siteUrl` | 複数サイト構成時に検索対象を1つの設定サイトへ限定 |
 | `startRow` | 検索結果の開始位置。前回結果の`nextStartRow`を使用できる |
 | `scope` | `all`、`pages`、`documents`から対象種類を選択 |
 | `folderUrl` | 設定サイト内のフォルダー配下に検索範囲を限定 |
@@ -74,6 +75,7 @@ SharePoint Search REST APIのGETエンドポイントを使用する。検索語
 
 ## 制限事項
 
+- 複数サイトを同時検索する場合、`startRow`は0だけを許可する。ページング時は`siteUrl`または`folderUrl`で1サイトへ限定する。
 - SharePoint検索インデックスへ未反映の更新は検索できない。
 - SharePointの検索スキーマ、権限、言語処理、ランキング設定に結果が依存する。
 - `author`、`sizeBytes`、`rank`、`parentUrl`は検索スキーマに値がない場合は省略される。

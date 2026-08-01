@@ -12,6 +12,7 @@ export type BrowserChannel = (typeof BROWSER_CHANNELS)[number];
 
 export interface AppConfig {
   readonly siteUrl: string;
+  readonly siteUrls: readonly string[];
   readonly siteOrigin: string;
   readonly profileDir: string;
   readonly browserChannel: BrowserChannel;
@@ -25,6 +26,10 @@ export function loadConfig(
 ): AppConfig {
   const rawSiteUrl = requireValue(env.SHAREPOINT_SITE_URL, "SHAREPOINT_SITE_URL");
   const siteUrl = normalizeSharePointSiteUrl(rawSiteUrl);
+  const siteUrls = normalizeSharePointSiteUrls(
+    siteUrl,
+    env.SHAREPOINT_ADDITIONAL_SITE_URLS,
+  );
   const profileDir = resolveProfileDir(env.SHAREPOINT_PROFILE_DIR, env);
   assertSafeProfileDirectory(profileDir);
 
@@ -38,12 +43,40 @@ export function loadConfig(
 
   return {
     siteUrl,
+    siteUrls,
     siteOrigin: new URL(siteUrl).origin,
     profileDir,
     browserChannel,
     headless: options.forceHeaded === true ? false : configuredHeadless,
     requestTimeoutMs,
   };
+}
+
+export function normalizeSharePointSiteUrls(
+  primarySiteUrl: string,
+  additionalSiteUrls: string | undefined,
+): readonly string[] {
+  const primary = normalizeSharePointSiteUrl(primarySiteUrl);
+  const primaryOrigin = new URL(primary).origin;
+  const values = additionalSiteUrls
+    ?.split(/[;,\r\n]+/u)
+    .map((value) => value.trim())
+    .filter(Boolean) ?? [];
+  const normalized = [primary, ...values.map(normalizeSharePointSiteUrl)];
+
+  if (normalized.some((siteUrl) => new URL(siteUrl).origin !== primaryOrigin)) {
+    throw new Error(
+      "SHAREPOINT_ADDITIONAL_SITE_URLS must use the same SharePoint tenant as SHAREPOINT_SITE_URL.",
+    );
+  }
+
+  const unique = [...new Map(
+    normalized.map((siteUrl) => [siteUrl.toLowerCase(), siteUrl] as const),
+  ).values()];
+  if (unique.length > 10) {
+    throw new Error("At most 10 SharePoint sites may be configured.");
+  }
+  return unique;
 }
 
 export function normalizeSharePointSiteUrl(value: string): string {

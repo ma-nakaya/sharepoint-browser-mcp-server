@@ -60,14 +60,17 @@ const outlineNodeSchema: z.ZodTypeAny = z.lazy(() =>
 
 export function registerDocumentTool(
   server: McpServer,
-  service: SharePointDocumentService,
+  service: Pick<
+    SharePointDocumentService,
+    "extractText" | "getOutline" | "search" | "getNodes"
+  >,
 ): void {
   server.registerTool(
     "sharepoint_extract_document_text",
     {
       title: "Extract text from a SharePoint document",
       description: [
-        "Downloads and extracts plain text from a PDF, DOCX, XLSX, or PPTX file under the configured SharePoint site.",
+        "Downloads and extracts plain text from a PDF, DOCX, XLSX, or PPTX file under a configured SharePoint site.",
         `Document source files are limited to ${MAX_DOCUMENT_SOURCE_BYTES} bytes.`,
         `Extracted text is limited to ${MAX_EXTRACTED_TEXT_CHARACTERS} characters.`,
         "Document actions are not executed, Office archives are expanded with strict limits, and no file is saved locally.",

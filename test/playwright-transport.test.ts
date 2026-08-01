@@ -11,6 +11,7 @@ import { PlaywrightSharePointTransport } from "../src/sharepoint/playwright-tran
 
 const CONFIG: AppConfig = {
   siteUrl: "https://example.sharepoint.com/sites/genai",
+  siteUrls: ["https://example.sharepoint.com/sites/genai"],
   siteOrigin: "https://example.sharepoint.com",
   profileDir: "/tmp/edge-profile",
   browserChannel: "msedge",

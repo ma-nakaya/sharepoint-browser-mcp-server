@@ -7,12 +7,19 @@ import {
   MAX_FOLDER_RESULTS,
 } from "../sharepoint/file-content.js";
 import type { SharePointFileService } from "../sharepoint/file-service.js";
+import type {
+  MultiSiteDocumentLibrariesResult,
+  MultiSiteSharePointFileService,
+} from "../sharepoint/multi-site-service.js";
 
 const requestMethodSchema = z.enum(["api-request", "browser-fetch"]);
 
 export function registerFileTools(
   server: McpServer,
-  service: SharePointFileService,
+  service: Pick<
+    MultiSiteSharePointFileService,
+    "listDocumentLibraries" | "listFolder" | "downloadFile"
+  >,
 ): void {
   registerDocumentLibrariesTool(server, service);
   registerFolderTool(server, service);
@@ -21,20 +28,28 @@ export function registerFileTools(
 
 function registerDocumentLibrariesTool(
   server: McpServer,
-  service: SharePointFileService,
+  service: Pick<MultiSiteSharePointFileService, "listDocumentLibraries">,
 ): void {
   server.registerTool(
     "sharepoint_list_document_libraries",
     {
       title: "List SharePoint document libraries",
       description: [
-        "Lists visible document libraries under the configured SharePoint site.",
+        "Lists visible document libraries across all configured SharePoint sites.",
+        "Use siteUrl to select one configured site.",
         "Use a returned root folder URL with sharepoint_list_folder.",
         "This tool is read-only.",
       ].join(" "),
-      inputSchema: {},
+      inputSchema: {
+        siteUrl: z
+          .string()
+          .url()
+          .optional()
+          .describe("Optional configured SharePoint site URL to list exclusively."),
+      },
       outputSchema: {
         siteUrl: z.string().url(),
+        siteUrls: z.array(z.string().url()),
         returnedLibraries: z.number().int().nonnegative(),
         method: requestMethodSchema,
         libraries: z.array(
@@ -48,8 +63,9 @@ function registerDocumentLibrariesTool(
       },
       annotations: readOnlyAnnotations(),
     },
-    async () => {
-      const result = await service.listDocumentLibraries();
+    async ({ siteUrl }) => {
+      const result: MultiSiteDocumentLibrariesResult =
+        await service.listDocumentLibraries(siteUrl);
       return {
         content: [{ type: "text" as const, text: JSON.stringify(result, null, 2) }],
         structuredContent: {
@@ -63,14 +79,14 @@ function registerDocumentLibrariesTool(
 
 function registerFolderTool(
   server: McpServer,
-  service: SharePointFileService,
+  service: Pick<SharePointFileService, "listFolder">,
 ): void {
   server.registerTool(
     "sharepoint_list_folder",
     {
       title: "List a SharePoint folder",
       description: [
-        "Lists direct child folders and files for a folder under the configured SharePoint site.",
+        "Lists direct child folders and files for a folder under a configured SharePoint site.",
         "Use an absolute or server-relative folder URL returned by this server.",
         "The downloadable flag shows whether sharepoint_download_file accepts each file.",
       ].join(" "),
@@ -80,7 +96,7 @@ function registerFolderTool(
           .trim()
           .min(1)
           .max(2_048)
-          .describe("Absolute or server-relative URL of a folder under the configured site."),
+          .describe("Absolute or server-relative URL of a folder under a configured site."),
         maxResults: z
           .number()
           .int()
@@ -140,14 +156,14 @@ function registerFolderTool(
 
 function registerDownloadTool(
   server: McpServer,
-  service: SharePointFileService,
+  service: Pick<SharePointFileService, "downloadFile">,
 ): void {
   server.registerTool(
     "sharepoint_download_file",
     {
       title: "Download a SharePoint file",
       description: [
-        "Downloads an allowed document, text, or image file from the configured SharePoint site.",
+        "Downloads an allowed document, text, or image file from a configured SharePoint site.",
         `Files larger than ${MAX_DOWNLOAD_BYTES} bytes and executable or active-content formats are rejected.`,
         "Returns the bytes as an embedded MCP resource and metadata separately.",
       ].join(" "),
