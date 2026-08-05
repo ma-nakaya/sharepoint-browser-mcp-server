@@ -1,0 +1,18 @@
+{
+  "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
+  "name": "sharepoint-browser-mcp",
+  "version": "0.10.0",
+  "description": "Search and read configured SharePoint Online sites with a portable skill that teaches progressive retrieval, citations, and strict read-only boundaries.",
+  "author": {
+    "name": "ma-nakaya",
+    "url": "https://github.com/ma-nakaya"
+  },
+  "homepage": "https://github.com/ma-nakaya/sharepoint-browser-mcp-server#readme",
+  "repository": "https://github.com/ma-nakaya/sharepoint-browser-mcp-server",
+  "keywords": [
+    "mcp",
+    "sharepoint",
+    "search",
+    "agent-skills"
+  ]
+}
