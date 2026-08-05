@@ -9,10 +9,10 @@ import {
   type CallToolResult,
 } from "@modelcontextprotocol/sdk/types.js";
 
-import type { ChatGptKnowledgeService } from "../src/sharepoint/chatgpt-knowledge-service.js";
-import { registerChatGptKnowledgeTools } from "../src/tools/chatgpt-knowledge-tools.js";
+import type { KnowledgeRetrievalService } from "../src/sharepoint/knowledge-retrieval-service.js";
+import { registerKnowledgeRetrievalTools } from "../src/tools/knowledge-retrieval-tools.js";
 
-test("advertises ChatGPT-compatible search and fetch tools over MCP", async () => {
+test("advertises portable search and fetch tools over MCP", async () => {
   const pageUrl =
     "https://example.sharepoint.com/sites/genai/SitePages/Home.aspx";
   const service = {
@@ -32,16 +32,16 @@ test("advertises ChatGPT-compatible search and fetch tools over MCP", async () =
     }),
   };
   const server = new McpServer({
-    name: "chatgpt-knowledge-test",
+    name: "knowledge-retrieval-test",
     version: "0.0.0",
   });
-  registerChatGptKnowledgeTools(
+  registerKnowledgeRetrievalTools(
     server,
-    service as unknown as ChatGptKnowledgeService,
+    service as unknown as KnowledgeRetrievalService,
   );
 
   const client = new Client({
-    name: "chatgpt-knowledge-test-client",
+    name: "knowledge-retrieval-test-client",
     version: "0.0.0",
   });
   const [clientTransport, serverTransport] =
@@ -109,15 +109,15 @@ test("returns safe fetch failures as MCP tool errors", async () => {
     },
   };
   const server = new McpServer({
-    name: "chatgpt-knowledge-error-test",
+    name: "knowledge-retrieval-error-test",
     version: "0.0.0",
   });
-  registerChatGptKnowledgeTools(
+  registerKnowledgeRetrievalTools(
     server,
-    service as unknown as ChatGptKnowledgeService,
+    service as unknown as KnowledgeRetrievalService,
   );
   const client = new Client({
-    name: "chatgpt-knowledge-error-test-client",
+    name: "knowledge-retrieval-error-test-client",
     version: "0.0.0",
   });
   const [clientTransport, serverTransport] =

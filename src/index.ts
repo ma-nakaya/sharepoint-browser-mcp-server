@@ -5,7 +5,7 @@ import { EdgeSession } from "./browser/edge-session.js";
 import { loadConfig } from "./config.js";
 import { StderrJsonLogger } from "./logger.js";
 import { AuthStatusService } from "./sharepoint/auth-status-service.js";
-import { ChatGptKnowledgeService } from "./sharepoint/chatgpt-knowledge-service.js";
+import { KnowledgeRetrievalService } from "./sharepoint/knowledge-retrieval-service.js";
 import { SharePointDocumentService } from "./sharepoint/document-service.js";
 import { SharePointFileService } from "./sharepoint/file-service.js";
 import {
@@ -16,7 +16,7 @@ import {
 import { PlaywrightSharePointTransport } from "./sharepoint/playwright-transport.js";
 import { SharePointReadService } from "./sharepoint/read-service.js";
 import { registerAuthStatusTool } from "./tools/auth-status-tool.js";
-import { registerChatGptKnowledgeTools } from "./tools/chatgpt-knowledge-tools.js";
+import { registerKnowledgeRetrievalTools } from "./tools/knowledge-retrieval-tools.js";
 import { registerDocumentTool } from "./tools/document-tool.js";
 import { registerFileTools } from "./tools/file-tools.js";
 import { registerPageTool } from "./tools/page-tool.js";
@@ -66,7 +66,7 @@ async function main(): Promise<void> {
     })),
   );
   const documentService = new SharePointDocumentService(fileService);
-  const chatGptKnowledgeService = new ChatGptKnowledgeService(
+  const knowledgeRetrievalService = new KnowledgeRetrievalService(
     readService,
     documentService,
   );
@@ -77,7 +77,7 @@ async function main(): Promise<void> {
       instructions: [
         "This server is read-only.",
         "Call sharepoint_auth_status before SharePoint operations.",
-        "Use search and fetch across the configured SharePoint sites for ChatGPT company knowledge and deep research compatibility.",
+        "Use search and fetch across the configured SharePoint sites for portable read-only knowledge retrieval.",
         "For policies and regulations, search the exact title with the standard search tool first; fetch supports both SitePages and Lists/DispForm.aspx results.",
         "Use sharepoint_search to find content across configured sites before opening pages or extracting documents.",
         "For large PDF or Office files, inspect the document outline or search document nodes before fetching selected node text.",
@@ -87,7 +87,7 @@ async function main(): Promise<void> {
   );
 
   registerAuthStatusTool(server, authStatusService);
-  registerChatGptKnowledgeTools(server, chatGptKnowledgeService);
+  registerKnowledgeRetrievalTools(server, knowledgeRetrievalService);
   registerSearchTool(server, readService);
   registerPageTool(server, readService);
   registerFileTools(server, fileService);
