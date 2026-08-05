@@ -1,14 +1,14 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { ChatGptKnowledgeService } from "../src/sharepoint/chatgpt-knowledge-service.js";
+import { KnowledgeRetrievalService } from "../src/sharepoint/knowledge-retrieval-service.js";
 
 const SITE_URL = "https://example.sharepoint.com/sites/genai";
 const PAGE_URL = `${SITE_URL}/SitePages/Home.aspx`;
 const LIST_ITEM_URL = `${SITE_URL}/Lists/Rules/DispForm.aspx?ID=204`;
 const DOCUMENT_URL = `${SITE_URL}/Shared%20Documents/Policy.docx`;
 
-test("maps fetchable SharePoint search results to the ChatGPT search contract", async () => {
+test("maps fetchable SharePoint results to the knowledge search contract", async () => {
   const readService = {
     search: async () => ({
       query: "policy",
@@ -66,7 +66,7 @@ test("maps fetchable SharePoint search results to the ChatGPT search contract", 
       throw new Error("not used");
     },
   };
-  const service = new ChatGptKnowledgeService(readService, documentService);
+  const service = new KnowledgeRetrievalService(readService, documentService);
 
   const result = await service.search("policy");
 
@@ -106,7 +106,7 @@ test("fetches SharePoint page text with citation metadata", async () => {
       throw new Error("not used");
     },
   };
-  const service = new ChatGptKnowledgeService(readService, documentService);
+  const service = new KnowledgeRetrievalService(readService, documentService);
 
   const result = await service.fetch(PAGE_URL);
 
@@ -148,7 +148,7 @@ test("fetches SharePoint list item text with citation metadata", async () => {
       throw new Error("not used");
     },
   };
-  const service = new ChatGptKnowledgeService(readService, documentService);
+  const service = new KnowledgeRetrievalService(readService, documentService);
 
   const result = await service.fetch(LIST_ITEM_URL);
 
@@ -196,7 +196,7 @@ test("fetches supported SharePoint document text with citation metadata", async 
       truncated: false,
     }),
   };
-  const service = new ChatGptKnowledgeService(readService, documentService);
+  const service = new KnowledgeRetrievalService(readService, documentService);
 
   const result = await service.fetch(DOCUMENT_URL);
 
@@ -221,7 +221,7 @@ test("rejects unsupported knowledge item IDs before SharePoint access", async ()
   let pageCalls = 0;
   let listItemCalls = 0;
   let documentCalls = 0;
-  const service = new ChatGptKnowledgeService(
+  const service = new KnowledgeRetrievalService(
     {
       search: async () => {
         throw new Error("not used");

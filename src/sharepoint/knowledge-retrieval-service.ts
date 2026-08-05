@@ -3,7 +3,7 @@ import { isSharePointListItemFormUrl } from "./list-item-content.js";
 import type { SharePointReadService } from "./read-service.js";
 import { MAX_SEARCH_RESULTS } from "./search.js";
 
-export const CHATGPT_SEARCH_RESULTS = 10;
+export const KNOWLEDGE_SEARCH_RESULTS = 10;
 
 const SUPPORTED_DOCUMENT_EXTENSIONS = new Set([
   "pdf",
@@ -12,24 +12,24 @@ const SUPPORTED_DOCUMENT_EXTENSIONS = new Set([
   "pptx",
 ]);
 
-export interface ChatGptSearchItem {
+export interface KnowledgeSearchItem {
   readonly id: string;
   readonly title: string;
   readonly url: string;
 }
 
-export interface ChatGptSearchResult {
-  readonly results: readonly ChatGptSearchItem[];
+export interface KnowledgeSearchResult {
+  readonly results: readonly KnowledgeSearchItem[];
 }
 
-export type ChatGptFetchMetadataValue = string | number | boolean;
+export type KnowledgeFetchMetadataValue = string | number | boolean;
 
-export interface ChatGptFetchResult {
+export interface KnowledgeFetchResult {
   readonly id: string;
   readonly title: string;
   readonly text: string;
   readonly url: string;
-  readonly metadata: Readonly<Record<string, ChatGptFetchMetadataValue>>;
+  readonly metadata: Readonly<Record<string, KnowledgeFetchMetadataValue>>;
 }
 
 type ReadService = Pick<
@@ -38,17 +38,17 @@ type ReadService = Pick<
 >;
 type DocumentService = Pick<SharePointDocumentService, "extractText">;
 
-export class ChatGptKnowledgeService {
+export class KnowledgeRetrievalService {
   constructor(
     private readonly readService: ReadService,
     private readonly documentService: DocumentService,
   ) {}
 
-  async search(query: string): Promise<ChatGptSearchResult> {
+  async search(query: string): Promise<KnowledgeSearchResult> {
     const result = await this.readService.search(query, MAX_SEARCH_RESULTS);
     const results = result.results
       .filter((item) => isFetchableSearchItem(item.kind, item.fileExtension))
-      .slice(0, CHATGPT_SEARCH_RESULTS)
+      .slice(0, KNOWLEDGE_SEARCH_RESULTS)
       .map((item) => ({
         id: item.url,
         title: item.title,
@@ -58,7 +58,7 @@ export class ChatGptKnowledgeService {
     return { results };
   }
 
-  async fetch(id: string): Promise<ChatGptFetchResult> {
+  async fetch(id: string): Promise<KnowledgeFetchResult> {
     const normalizedId = id.trim();
     if (!normalizedId) {
       throw new Error("Knowledge item ID must not be empty.");

@@ -1,7 +1,7 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 
-import type { ChatGptKnowledgeService } from "../sharepoint/chatgpt-knowledge-service.js";
+import type { KnowledgeRetrievalService } from "../sharepoint/knowledge-retrieval-service.js";
 import { MAX_SEARCH_QUERY_CHARACTERS } from "../sharepoint/search.js";
 
 const searchItemSchema = z.object({
@@ -16,9 +16,9 @@ const fetchMetadataValueSchema = z.union([
   z.boolean(),
 ]);
 
-export function registerChatGptKnowledgeTools(
+export function registerKnowledgeRetrievalTools(
   server: McpServer,
-  service: ChatGptKnowledgeService,
+  service: KnowledgeRetrievalService,
 ): void {
   server.registerTool(
     "search",

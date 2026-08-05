@@ -2,7 +2,7 @@
 
 Entra IDアプリ登録を使用せず、Microsoft Edgeの認証済みセッションからSharePoint Onlineへ読み取り専用で接続するオンプレMCPサーバーです。
 
-Phase 1の認証状態確認、Phase 2の検索・ページ本文取得、Phase 3のファイルアクセス、Phase 4のPDF・Office文書本文抽出、Phase 5のSharePointサイト横断検索、Phase 6の文書構造検索、Phase 7のChatGPT接続、Phase 8のSharePointリスト項目取得、Phase 9の最大20 MiB文書解析に加え、Phase 10では複数サイトの横断検索・取得に対応します。
+Phase 1の認証状態確認、Phase 2の検索・ページ本文取得、Phase 3のファイルアクセス、Phase 4のPDF・Office文書本文抽出、Phase 5のSharePointサイト横断検索、Phase 6の文書構造検索、Phase 7の汎用検索・取得、Phase 8のSharePointリスト項目取得、Phase 9の最大20 MiB文書解析に加え、Phase 10では複数サイトの横断検索・取得に対応します。
 
 ## 目的
 
@@ -15,7 +15,6 @@ Phase 1の認証状態確認、Phase 2の検索・ページ本文取得、Phase 
 ## 対応範囲
 
 - TypeScriptのstdio MCPサーバー
-- OpenAI Secure MCP Tunnelによる非公開stdio接続
 - MCP専用Edgeプロファイル
 - 初回・再認証用のheadedログインコマンド
 - `sharepoint_auth_status` MCPツール
@@ -29,7 +28,7 @@ Phase 1の認証状態確認、Phase 2の検索・ページ本文取得、Phase 
 - `sharepoint_get_document_outline`によるページ・見出し・シート・スライドの構造化
 - `sharepoint_search_document`による1文書内のノード検索
 - `sharepoint_get_document_nodes`による選択ノードだけの本文取得
-- `search`と`fetch`によるChatGPT会社知識・Deep Research互換
+- `search`と`fetch`による汎用の読み取り専用検索・取得
 - `Lists/.../DispForm.aspx?ID=...`で表されるSharePointリスト項目の本文取得
 - `BrowserContext.request`からページ内`fetch`へのフォールバック
 - 設定値、URL制約、レスポンス解析、認証判定、検索、ページ、ファイル、文書抽出の単体テスト
@@ -134,7 +133,7 @@ stdioクライアントの設定例:
 
 ### `search` / `fetch`
 
-ChatGPTの会社知識・Deep Research互換ツールです。`search`は設定済みSharePointサイト群から引用可能なページ、リスト項目、対応文書を横断検索し、`fetch`は返されたIDから対象サイトを選び、本文と引用URLを取得します。
+汎用の読み取り専用検索・取得ツールです。`search`は設定済みSharePointサイト群から引用可能なページ、リスト項目、対応文書を横断検索し、`fetch`は返されたIDから対象サイトを選び、本文と引用URLを取得します。
 
 - `search`入力: `query`
 - `search`出力: `id`、`title`、絶対`url`を持つ最大10件の`results`
@@ -143,7 +142,7 @@ ChatGPTの会社知識・Deep Research互換ツールです。`search`は設定�
 - 対応対象: `SitePages`の`.aspx`、`Lists`直下の`DispForm.aspx?ID=...`、PDF、DOCX、XLSX、PPTX
 - 規程・規則は文書ファイルとは限らないため、最初に正確な名称を`search`へ渡す
 
-ChatGPTとの接続方法は[`docs/phase-7-chatgpt-connection.md`](docs/phase-7-chatgpt-connection.md)、リスト項目取得は[`docs/phase-8-list-item-fetch.md`](docs/phase-8-list-item-fetch.md)を参照してください。
+リスト項目取得は[`docs/phase-8-list-item-fetch.md`](docs/phase-8-list-item-fetch.md)を参照してください。
 
 ### `sharepoint_auth_status`
 
@@ -272,7 +271,6 @@ PDF・DOCX・XLSX・PPTXを共通ノードへ変換し、短いプレビュー�
 [`docs/phase-4-document-text.md`](docs/phase-4-document-text.md)、
 [`docs/phase-5-site-search.md`](docs/phase-5-site-search.md)、
 [`docs/phase-6-document-structure.md`](docs/phase-6-document-structure.md)、
-[`docs/phase-7-chatgpt-connection.md`](docs/phase-7-chatgpt-connection.md)、
 [`docs/phase-8-list-item-fetch.md`](docs/phase-8-list-item-fetch.md)、
 [`docs/phase-9-large-document-processing.md`](docs/phase-9-large-document-processing.md)、
 [`docs/phase-10-multi-site.md`](docs/phase-10-multi-site.md)を参照してください。
