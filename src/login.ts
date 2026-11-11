@@ -1,11 +1,21 @@
 import { EdgeSession } from "./browser/edge-session.js";
+import { SharedEdgeManager } from "./browser/shared-edge.js";
 import { loadConfig } from "./config.js";
 import { StderrJsonLogger } from "./logger.js";
 
 async function main(): Promise<void> {
   const config = loadConfig(process.env, { forceHeaded: true });
   const logger = new StderrJsonLogger();
-  const edgeSession = new EdgeSession(config, logger);
+  // Login needs the profile exclusively in a headed window, so stop the
+  // shared Edge first. It restarts on demand at the next MCP tool call and
+  // reuses the session this login refreshes.
+  const stoppedSharedEdge = await new SharedEdgeManager(config, logger).stop();
+  if (stoppedSharedEdge) {
+    process.stderr.write(
+      "Stopped the shared Edge process so the profile can be used for login.\n",
+    );
+  }
+  const edgeSession = new EdgeSession(config, logger, "exclusive");
   const context = await edgeSession.getContext();
   const pages = context.pages();
   for (const [index, siteUrl] of config.siteUrls.entries()) {

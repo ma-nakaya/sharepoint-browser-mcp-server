@@ -10,6 +10,12 @@ export const BROWSER_CHANNELS = [
 
 export type BrowserChannel = (typeof BROWSER_CHANNELS)[number];
 
+export const EDGE_MODES = ["shared", "exclusive"] as const;
+
+export type EdgeMode = (typeof EDGE_MODES)[number];
+
+export const DEFAULT_CDP_PORT = 9229;
+
 export interface AppConfig {
   readonly siteUrl: string;
   readonly siteUrls: readonly string[];
@@ -18,6 +24,9 @@ export interface AppConfig {
   readonly browserChannel: BrowserChannel;
   readonly headless: boolean;
   readonly requestTimeoutMs: number;
+  readonly edgeMode: EdgeMode;
+  readonly cdpPort: number;
+  readonly edgeExecutablePath: string | undefined;
 }
 
 export function loadConfig(
@@ -40,6 +49,9 @@ export function loadConfig(
     15_000,
     "SHAREPOINT_REQUEST_TIMEOUT_MS",
   );
+  const edgeMode = parseEdgeMode(env.SHAREPOINT_EDGE_MODE);
+  const cdpPort = parseCdpPort(env.SHAREPOINT_CDP_PORT);
+  const edgeExecutablePath = env.SHAREPOINT_EDGE_EXECUTABLE_PATH?.trim() || undefined;
 
   return {
     siteUrl,
@@ -49,6 +61,9 @@ export function loadConfig(
     browserChannel,
     headless: options.forceHeaded === true ? false : configuredHeadless,
     requestTimeoutMs,
+    edgeMode,
+    cdpPort,
+    edgeExecutablePath,
   };
 }
 
@@ -186,6 +201,24 @@ function parseBoolean(value: string | undefined, defaultValue: boolean, name: st
     return false;
   }
   throw new Error(`${name} must be true or false.`);
+}
+
+function parseEdgeMode(value: string | undefined): EdgeMode {
+  const normalized = value?.trim().toLowerCase() || "shared";
+  if (!EDGE_MODES.includes(normalized as EdgeMode)) {
+    throw new Error(
+      `SHAREPOINT_EDGE_MODE must be one of: ${EDGE_MODES.join(", ")}.`,
+    );
+  }
+  return normalized as EdgeMode;
+}
+
+function parseCdpPort(value: string | undefined): number {
+  const port = parsePositiveInteger(value, DEFAULT_CDP_PORT, "SHAREPOINT_CDP_PORT");
+  if (port < 1024 || port > 65_535) {
+    throw new Error("SHAREPOINT_CDP_PORT must be between 1024 and 65535.");
+  }
+  return port;
 }
 
 function parsePositiveInteger(value: string | undefined, defaultValue: number, name: string): number {

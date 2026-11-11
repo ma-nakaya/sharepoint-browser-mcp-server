@@ -17,6 +17,9 @@ const CONFIG: AppConfig = {
   browserChannel: "msedge",
   headless: true,
   requestTimeoutMs: 15_000,
+  edgeMode: "exclusive",
+  cdpPort: 9229,
+  edgeExecutablePath: undefined,
 };
 
 const LOGGER: Logger = {

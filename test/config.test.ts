@@ -47,6 +47,9 @@ test("loads secure defaults", () => {
   assert.equal(config.browserChannel, "msedge");
   assert.equal(config.headless, true);
   assert.equal(config.requestTimeoutMs, 15_000);
+  assert.equal(config.edgeMode, "shared");
+  assert.equal(config.cdpPort, 9229);
+  assert.equal(config.edgeExecutablePath, undefined);
   assert.deepEqual(config.siteUrls, [
     "https://example.sharepoint.com/sites/genai",
   ]);
@@ -100,5 +103,40 @@ test("rejects normal Edge profile directories", () => {
         path.join(path.sep, "Users", "person", "AppData", "Local", "Microsoft", "Edge", "User Data", "Default"),
       ),
     /normal Edge profile/u,
+  );
+});
+
+test("loads shared Edge overrides", () => {
+  const config = loadConfig({
+    SHAREPOINT_SITE_URL: "https://example.sharepoint.com/sites/genai",
+    SHAREPOINT_EDGE_MODE: "exclusive",
+    SHAREPOINT_CDP_PORT: "9333",
+    SHAREPOINT_EDGE_EXECUTABLE_PATH: "C:\\Program Files\\Microsoft\\Edge\\Application\\msedge.exe",
+  });
+
+  assert.equal(config.edgeMode, "exclusive");
+  assert.equal(config.cdpPort, 9333);
+  assert.equal(
+    config.edgeExecutablePath,
+    "C:\\Program Files\\Microsoft\\Edge\\Application\\msedge.exe",
+  );
+});
+
+test("rejects unknown edge modes and out-of-range CDP ports", () => {
+  assert.throws(
+    () =>
+      loadConfig({
+        SHAREPOINT_SITE_URL: "https://example.sharepoint.com/sites/genai",
+        SHAREPOINT_EDGE_MODE: "pooled",
+      }),
+    /SHAREPOINT_EDGE_MODE/u,
+  );
+  assert.throws(
+    () =>
+      loadConfig({
+        SHAREPOINT_SITE_URL: "https://example.sharepoint.com/sites/genai",
+        SHAREPOINT_CDP_PORT: "80",
+      }),
+    /SHAREPOINT_CDP_PORT/u,
   );
 });
