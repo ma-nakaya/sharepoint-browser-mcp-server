@@ -23,7 +23,7 @@ import { registerPageTool } from "./tools/page-tool.js";
 import { registerSearchTool } from "./tools/search-tool.js";
 
 const SERVER_NAME = "sharepoint-browser-mcp-server";
-const SERVER_VERSION = "0.10.0";
+const SERVER_VERSION = "0.11.0";
 
 async function main(): Promise<void> {
   const config = loadConfig();

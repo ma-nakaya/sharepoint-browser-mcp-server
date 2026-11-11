@@ -9,8 +9,9 @@ Entra ID のアプリ登録を使わず、Microsoft Edge の認証済みセッ�
 - アクセス先は設定済みサイト群（同一テナント、最大 10 サイト）の `/_api/` 配下だけに制限
 - すべての MCP ツールは読み取り専用。書き込み、アップロード、更新、削除は提供しない
 - 複数サイトの横断検索・取得に対応
+- 複数のエージェントセッション（Copilot CLI、Claude Code など）から同時に使える共有 Edge 方式（Phase 11）。認証は専用プロファイルへの 1 回だけで、セッションごとにサインインし直す必要はない
 
-現在の到達点は Phase 10（複数サイト対応）です。Phase 1 の認証状態確認から、検索・ページ取得（Phase 2）、ファイルアクセス（Phase 3）、文書本文抽出（Phase 4）、サイト横断検索（Phase 5）、文書構造検索（Phase 6）、汎用検索・取得（Phase 7）、リスト項目取得（Phase 8）、最大 20 MiB の文書解析（Phase 9）までを含みます。各 Phase の詳細は `docs/` を参照してください。
+現在の到達点は Phase 11（Edge の複数セッション共有）です。Phase 1 の認証状態確認から、検索・ページ取得（Phase 2）、ファイルアクセス（Phase 3）、文書本文抽出（Phase 4）、サイト横断検索（Phase 5）、文書構造検索（Phase 6）、汎用検索・取得（Phase 7）、リスト項目取得（Phase 8）、最大 20 MiB の文書解析（Phase 9）までを含みます。各 Phase の詳細は `docs/` を参照してください。
 
 ## 対応範囲と対象外
 
@@ -64,6 +65,8 @@ npm run login
 
 MCP 専用プロファイルで Edge が起動します。通常どおり SSO・MFA を完了し、対象 SharePoint サイトが表示されたことを確認してから Edge を閉じます。
 
+共有 Edge が起動している場合、`npm run login` は先に共有 Edge を停止してからログイン用ウィンドウを開きます。ログインで更新したセッションは、次回のツール呼び出しで共有 Edge が自動起動したときにそのまま使われます。
+
 普段利用している Edge プロファイルを `SHAREPOINT_PROFILE_DIR` に指定しないでください。既知の Edge 既定プロファイル配下は起動前に拒否します。
 
 ## 使い方
@@ -102,6 +105,18 @@ stdio クライアントの設定例:
 }
 ```
 
+## 複数セッションでの利用
+
+既定の `SHAREPOINT_EDGE_MODE=shared` では、最初にツールを使ったセッションが専用プロファイルの Edge を 1 つだけ起動し（デバッグポート付き、プロセスはセッションから切り離されます）、以降の全セッションは CDP でその Edge に接続します。Edge はセッションを閉じても終了しないため、Copilot CLI と Claude Code を同時に開いていても競合しません。プロファイルは 1 つのままなので、追加のサインインも不要です。
+
+共有 Edge を明示的に止める場合:
+
+```powershell
+npm run edge:stop
+```
+
+デバッグポートは 127.0.0.1 のみにバインドします。CDP はブラウザ全体を操作できるため、同一マシンの同一ユーザーで動くプロセス以外からは到達できない前提です。問題時の切り分けには `SHAREPOINT_EDGE_MODE=exclusive` で従来方式へ戻せます。詳細は [Phase 11: Edge の複数セッション共有](docs/phase-11-shared-edge.md) を参照してください。
+
 ## 設定
 
 | 環境変数 | 既定値 | 説明 |
@@ -111,6 +126,9 @@ stdio クライアントの設定例:
 | `SHAREPOINT_PROFILE_DIR` | OS 別のユーザー領域 | MCP 専用 Edge プロファイルの保存先 |
 | `SHAREPOINT_BROWSER_CHANNEL` | `msedge` | 使用する Edge チャネル（`msedge`／`msedge-beta`／`msedge-dev`／`msedge-canary`） |
 | `SHAREPOINT_HEADLESS` | `true` | Edge をヘッドレスで起動するか |
+| `SHAREPOINT_EDGE_MODE` | `shared` | `shared`（全セッションで 1 つの Edge を共有）／`exclusive`（従来どおりセッションごとに起動） |
+| `SHAREPOINT_CDP_PORT` | `9229` | 共有 Edge のデバッグポート（127.0.0.1 のみ） |
+| `SHAREPOINT_EDGE_EXECUTABLE_PATH` | 自動検出 | Edge 実行ファイルのフルパス（自動検出できない環境向け） |
 | `SHAREPOINT_REQUEST_TIMEOUT_MS` | `15000` | リクエストのタイムアウト（ミリ秒） |
 | `LOG_LEVEL` | `info` | ログレベル（`.env.example` 記載） |
 
@@ -225,7 +243,7 @@ PDF・DOCX・XLSX・PPTX を共通ノードへ変換し、短いプレビュー�
 - Cookie やトークンを独自ファイルへエクスポートしません。HTTP エラー時の HTML 本文は読み取りません
 - ログは標準エラーへ出力し、標準出力は MCP プロトコル専用とします
 
-詳細は [Phase 1: 認証](docs/phase-1-authentication.md)、[Phase 2: SharePoint 読み取り](docs/phase-2-sharepoint-read.md)、[Phase 3: ファイルアクセス](docs/phase-3-file-access.md)、[Phase 4: 文書本文](docs/phase-4-document-text.md)、[Phase 5: サイト検索](docs/phase-5-site-search.md)、[Phase 6: 文書構造](docs/phase-6-document-structure.md)、[Phase 8: リスト項目](docs/phase-8-list-item-fetch.md)、[Phase 9: 大規模文書](docs/phase-9-large-document-processing.md)、[Phase 10: 複数サイト](docs/phase-10-multi-site.md) を参照してください。
+詳細は [Phase 1: 認証](docs/phase-1-authentication.md)、[Phase 2: SharePoint 読み取り](docs/phase-2-sharepoint-read.md)、[Phase 3: ファイルアクセス](docs/phase-3-file-access.md)、[Phase 4: 文書本文](docs/phase-4-document-text.md)、[Phase 5: サイト検索](docs/phase-5-site-search.md)、[Phase 6: 文書構造](docs/phase-6-document-structure.md)、[Phase 8: リスト項目](docs/phase-8-list-item-fetch.md)、[Phase 9: 大規模文書](docs/phase-9-large-document-processing.md)、[Phase 10: 複数サイト](docs/phase-10-multi-site.md)、[Phase 11: Edge の複数セッション共有](docs/phase-11-shared-edge.md) を参照してください。
 
 ## 開発
 

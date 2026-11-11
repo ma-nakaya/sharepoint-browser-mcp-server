@@ -1,6 +1,6 @@
 {
   "name": "sharepoint-browser-mcp-server",
-  "version": "0.10.0",
+  "version": "0.11.0",
   "description": "Read-only SharePoint MCP server using an authenticated Microsoft Edge session without Entra app registration.",
   "type": "module",
   "private": true,
@@ -22,7 +22,9 @@
     "dev": "npm run build && npm start",
     "pretest": "npm run build",
     "test": "node --test --enable-source-maps \"dist/test/**/*.test.js\"",
-    "check": "npm run clean && npm test"
+    "check": "npm run clean && npm test",
+    "preedge:stop": "npm run build",
+    "edge:stop": "node --env-file-if-exists=.env --enable-source-maps dist/src/stop-shared-edge.js"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "1.30.0",
